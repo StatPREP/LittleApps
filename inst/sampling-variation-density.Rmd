@@ -1,0 +1,149 @@
+---
+title: "Sampling Variation and Distributions"
+runtime: shiny
+output: html_document
+---
+
+```{r include=FALSE}
+library(NHANES)
+library(ggformula)
+library(dplyr)
+knitr::opts_chunk$set(echo = TRUE)
+Base_data <- NHANES %>% select(Weight, Height) %>% na.omit()
+```
+
+
+```{r echo = FALSE}
+A <- selectInput("response", "Variable:",
+                 choices = c("Weight", "Height"), width = "100px")
+B <- selectInput("samp_n", "Sample size:", choices = c(5, 10, 50, 100, 500, 1000), selected = "100", width = "100px")
+S <- sliderInput("bw", "Smoothing:", min = 1, max = 20, value = 3, width = "150px")
+D <- checkboxInput("show_data", "Show data values", value = FALSE, width = "150px")
+P_density <- plotOutput("plot1", width = "500px",
+                click = clickOpts(id = "click_density", clip = FALSE))
+P_dhist <- plotOutput("plot2", width = "500px",
+                click = clickOpts(id = "click_hist", clip = FALSE))
+P_ash <- plotOutput("plot3", width = "500px",
+                click = clickOpts(id = "click_ash", clip = FALSE))
+Panel <- tabsetPanel(
+    tabPanel("Density", P_density),
+    tabPanel("Histogram", P_dhist),
+    tabPanel("ASH", P_ash)
+  )
+```
+
+```{r echo = FALSE, context = "server"}
+state <- reactiveValues()
+state$n_selected <- 1
+samp_n <- reactive(as.numeric(input$samp_n))
+bw <- reactive(as.numeric(input$bw))
+ntrials <- reactive(5) # Less than 26, or increase set below
+the_formula <- reactive(as.formula(paste("~", input$response))) 
+the_formula2 <- reactive(as.formula(paste("y ~", input$response))) 
+population <- reactive({Base_data[input$response]})
+trial_names <- reactive(paste0(LETTERS, c("",1:ceiling(26/ntrials()))))
+max_y_value <- reactive(switch(input$response, 
+                             "Weight" = 0.018,
+                             "Height" = 0.031))
+
+# Which trial to highligh
+observeEvent(
+  list(input$click_density, input$click_ash, input$click_hist),
+  {
+    if (! (is.null(input$click_density) &&
+           is.null(input$click_ash) &&
+           is.null(input$click_hist))) {
+      state$n_selected <- state$n_selected + 1
+      if (state$n_selected > ntrials()) state$n_selected <- 1
+    }
+  })
+
+samps <- reactive({
+  
+  res <- lapply(1:ntrials(), 
+                function(x) { 
+                  population() %>% sample_n(size = samp_n()) %>% 
+                    mutate(Trial = trial_names()[x], Trialn = x, y = - max_y_value() * 0.1)
+                  })
+  bind_rows(res)
+                
+})
+
+
+output$plot1 <- renderPlot({
+  A <- 
+    gf_density(the_formula(), data = samps(), bw = bw(),
+               color = ~ Trial, fill = NA, size = 0.5) %>% 
+    gf_density(the_formula(), data = samps() %>% filter(Trialn == state$n_selected), bw = bw(),
+               color = ~ Trial, fill = NA, size = 1.5, alpha = 0.2) %>%
+    gf_theme(legend.position = "none")
+  if (input$show_data) {
+    set.seed(101)
+    A %>% gf_jitter(the_formula2(), 
+                    data = samps() %>% filter(Trialn == state$n_selected), 
+                    width = 0, height = 0.1 * max_y_value(),
+                    alpha = 0.5)
+  } else {
+    A
+  }
+})
+output$plot2 <- renderPlot({
+  A <- 
+    gf_dhistogram(the_formula(), data = samps(), binwidth = bw() / 0.5,
+                  color = ~ Trial, fill = NA, size = 0.5,
+                  show.legend = FALSE, position = "dodge") %>% 
+    gf_dhistogram(the_formula(), data = samps() %>% filter(Trialn == state$n_selected), 
+                  binwidth = bw() / 0.5,
+                  color = ~ Trial, fill = NA, size = 1, alpha = 0.2,
+                  show.legend = FALSE) %>%
+    gf_theme(legend.position = "none")
+  if (input$show_data) {
+    set.seed(101)
+    A %>% gf_jitter(the_formula2(), 
+                    data = samps() %>% filter(Trialn == state$n_selected), 
+                    width = 0, height = 0.1 * max_y_value(),
+                    alpha = 0.5)
+  } else {
+    A
+  }
+})
+output$plot3 <- renderPlot({
+  A <- 
+    gf_ash(the_formula(), data = samps(), binwidth = bw() / 0.5,
+           color = ~ Trial, fill = NA, size = 0.5,
+           show.legend = FALSE) %>% 
+    gf_ash(the_formula(), data = samps() %>% filter(Trialn == state$n_selected), 
+           binwidth = bw() / 0.5, color = ~ Trial, fill = NA, size = 1.5,
+           show.legend = FALSE) %>%
+    gf_theme(legend.position = "none")
+  if (input$show_data) {
+     set.seed(101)
+     A %>% gf_jitter(the_formula2(), 
+                     data = samps() %>% filter(Trialn == state$n_selected), 
+                     width = 0, height = 0.1 * max_y_value(),
+                     alpha = 0.5)
+   } else {
+     A
+   }
+})
+```
+
+<table><tr><td class="control">`r A` `r B` `r S` `r D`</td><td class="plot">`r Panel`</td></tr></table>
+
+
+<style type="text/css">
+td.control {
+  border:5px solid gray;
+  border-radius:10px;
+  padding: 5px;
+  vertical-align: top;
+}
+td.plot {
+  border:5px solid gray;
+  padding: 5px;
+  border-radius:10px;
+  color: white;
+}
+
+</style>
+

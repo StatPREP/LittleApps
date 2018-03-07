@@ -10,7 +10,7 @@
 select_app <- function() {
   possibilities <- dir(system.file(package = "StatPREPshiny"), pattern = ".Rmd$")
   which_app <- menu(possibilities)
-  if (which_app > 0) run(file = system.file(possibilities[which_app], package = "StatPREPshiny"))
+  if (which_app > 0) rmarkdown::run(file = system.file(possibilities[which_app], package = "StatPREPshiny"))
 
   NULL
 }
