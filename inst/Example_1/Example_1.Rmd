@@ -1,0 +1,58 @@
+---
+title: "Tutorial"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(shiny)
+library(miniUI)
+library(shinydashboard)
+knitr::opts_chunk$set(echo = FALSE)
+source(system.file("test_single_file/app.R", package = "StatPREPshiny"))
+```
+
+## Including a single file app
+
+```{r}
+ui
+```
+
+```{r context = "server"}
+eval(body(server))
+```
+
+
+
+## A login app
+
+<style type="text/css">
+td.login_entry {
+  padding-top: 10px;
+}
+</style>
+
+
+
+<table><tr><td class="login_entry">`r textInput("userID", label=NULL, placeholder="User ID", width = "150px" )`</td><td class="login_entry">`r passwordInput("password", label=NULL, placeholder = "password", width = "150px")`</td><td> `r actionButton("login", "Login")`
+</td>
+</tr><tr><td>`r textOutput("login_message", inline = FALSE )`</td>
+</tr></table>
+
+
+
+
+
+```{r context = "server"}
+output$login_message <- renderText({input$login; "This is the message."})
+```
+
+
+## Including an Rmd app
+
+
+```{r child = system.file("compare-distributions.Rmd", package = "StatPREPshiny")}
+```
+
+

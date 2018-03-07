@@ -1,0 +1,89 @@
+---
+title: "Comparing distributions"
+runtime: shiny
+output: html_document
+---
+
+```{r include=FALSE}
+library(NHANES)
+library(ggformula)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo = FALSE}
+A <- selectInput("response", "Response variable",
+                 choices = c("Weight", "Height"), width = "100px")
+B <- selectInput("explan", "Explanatory variable",
+                 choices = c("Gender", "Education"), width = "100px")
+C <- checkboxGroupInput("layers", "Graphics layers:",
+                        c("violin plot", "boxplot"), width = "100px")
+P <- plotOutput("plot1", width = "500px",
+                brush = brushOpts("eliminate", direction = "y", fill = NA))
+```
+
+```{r echo = FALSE, context = "server"}
+the_formula <- reactive(as.formula(paste(input$response, "~", input$explan)))
+
+the_data <- reactive({
+  res <- NHANES
+  res$keepers <- TRUE
+  bounds <- input$eliminate
+  cat(capture.output(bounds))
+  if (!is.null(bounds)) {
+    response <- res[[input$response]]
+    res$keepers <- response > bounds$ymax | response < bounds$ymin
+  }
+
+  res
+})
+
+max_value <- reactive(max(NHANES[[input$response]]))
+
+graphics <- reactive({
+    set.seed(101) # so the dots don't move around
+    all_data <- the_data()
+    keepers <- all_data[all_data$keepers,]
+    A <- gf_jitter(the_formula(), data = keepers,
+              width = 0.3, alpha = 0.1)
+    if ("boxplot" %in% input$layers)
+      A <- A %>% gf_boxplot(data = keepers, alpha = 0.5, color = "blue", fill = NA)
+    if ("violin plot" %in% input$layers)
+      A <- A %>% gf_violin(data = keepers, alpha = 0.3, color = NA, fill = "green")
+
+    return(A %>% gf_lims(y = c(0, max_value())))
+  })
+
+
+output$plot1 <- renderPlot({graphics()})
+```
+
+<table><tr><td class="control">`r A` `r B` `r C`</td><td class="plot">`r P`</td></tr></table>
+
+
+
+<style type="text/css">
+td.control {
+  border:5px solid gray;
+  border-radius:10px;
+  padding: 5px;
+  vertical-align: top;
+}
+td.plot {
+  border:5px solid gray;
+  padding: 5px;
+  border-radius:10px;
+  color: white;
+}
+
+</style>
+
+
+
+
+Tasks:
+
+* Delete the points covered by the center 50%.
+* Delete the lower quarter.
+* Delete the upper quarter.
+* Delete a quarter from somewhere in the middle.

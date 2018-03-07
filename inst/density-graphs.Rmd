@@ -1,0 +1,99 @@
+---
+title: "Displaying densities"
+runtime: shiny
+output: html_document
+---
+
+```{r include=FALSE}
+library(NHANES)
+library(ggformula)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo = FALSE}
+A <- selectInput("response", "Response variable",
+                 choices = c("Weight", "Height"), width = "100px")
+C <- checkboxGroupInput("layers", "Graphics layers:",
+                        c("density", "histogram"), width = "100px")
+S <- sliderInput("bw", "Smoothing:", min = 1, max = 20, value = 3, width = "150px")
+P <- plotOutput("plot1", width = "500px",
+                brush = brushOpts("eliminate", direction = "x", fill = NA))
+```
+
+
+
+
+```{r echo = FALSE, context = "server"}
+the_formula <- reactive(as.formula(paste("yval ~", input$response)))
+
+the_data <- reactive({
+  res <- NHANES
+  res$yval = 1.1 * max_y_value() 
+  res$keepers <- TRUE
+  bounds <- input$eliminate
+  cat(capture.output(bounds))
+  if (!is.null(bounds)) {
+    response <- res[[input$response]]
+    res$keepers <- response > bounds$xmax | response < bounds$xmin
+  }
+
+  res
+})
+
+max_y_value <- reactive(switch(input$response, 
+                             "Weight" = 0.018,
+                             "Height" = 0.031))
+                      
+max_x_value <- reactive(max(NHANES[[input$response]], na.rm = TRUE))
+
+bw <- reactive(as.numeric(input$bw))
+
+graphics <- reactive({
+  cat(max_x_value(), "\n")
+    set.seed(101) # so the dots don't move around
+    all_data <- the_data()
+    keepers <- all_data[all_data$keepers,]
+    A <- gf_jitter(the_formula(), data = keepers, alpha = 0.1, 
+                   height = 0.1 * max_y_value(),
+                   size = bw() / 10)
+    if ("density" %in% input$layers)
+      A <- A %>% gf_density(data = keepers, alpha = 0.5, 
+                            color = "blue", fill = "blue",
+                            bw = bw())
+    if ("histogram" %in% input$layers)
+      A <- A %>% gf_dhistogram(data = keepers, 
+                               alpha = 0.7, color = "black", fill = NA,
+                               binwidth = bw() / 0.5)
+    return(A %>% 
+             gf_lims(y = c(0, 1.2*max_y_value()*
+                               ifelse(length(input$layers)==0, 1, NA)), 
+                     x = c(-.1,1) * max_x_value()) %>% 
+             gf_labs(y = ifelse(length(input$layers)==0, "", "Density")))
+  })
+
+
+output$plot1 <- renderPlot({graphics()})
+```
+
+<table><tr><td class="control">`r A` `r C` `r S`</td><td class="plot">`r P`</td></tr></table>
+
+
+
+<style type="text/css">
+td.control {
+  border:1px solid gray;
+  border-radius:10px;
+  padding: 5px;
+  vertical-align: top;
+}
+td.plot {
+  border:1px solid gray;
+  padding: 5px;
+  border-radius:10px;
+  color: white;
+}
+
+</style>
+
+
