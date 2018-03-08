@@ -32,7 +32,6 @@ the_data <- reactive({
   res$yval = 1.1 * max_y_value() 
   res$keepers <- TRUE
   bounds <- input$eliminate
-  cat(capture.output(bounds))
   if (!is.null(bounds)) {
     response <- res[[input$response]]
     res$keepers <- response > bounds$xmax | response < bounds$xmin
@@ -50,7 +49,6 @@ max_x_value <- reactive(max(NHANES[[input$response]], na.rm = TRUE))
 bw <- reactive(as.numeric(input$bw))
 
 graphics <- reactive({
-  cat(max_x_value(), "\n")
     set.seed(101) # so the dots don't move around
     all_data <- the_data()
     keepers <- all_data[all_data$keepers,]

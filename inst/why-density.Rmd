@@ -1,0 +1,64 @@
+---
+title: "Displaying densities"
+runtime: shiny
+output: html_document
+---
+
+```{r include=FALSE}
+library(NHANES)
+library(ggformula)
+library(dplyr)
+knitr::opts_chunk$set(echo = TRUE)
+NHANES <- NHANES %>% mutate(PregnantNow = ifelse(is.na(PregnantNow), "No", as.character(PregnantNow)))
+```
+
+
+```{r echo = FALSE}
+A <- selectInput("response", "Response variable",
+                 choices = c("pregnancy", "diabetes"), width = "100px")
+C <- radioButtons("display", "Type of display:",
+                        c("density", "histogram"), width = "100px")
+P <- plotOutput("plot1", width = "500px")
+```
+
+
+
+
+```{r echo = FALSE, context = "server"}
+the_formula <- reactive(as.formula(paste("~ Age | PregnantNow")))
+
+
+
+
+
+graphics <- reactive({
+  if (input$display == "histogram")
+    gf_histogram(the_formula(), data = NHANES)
+  else gf_density(the_formula(), data = NHANES)
+})
+
+
+output$plot1 <- renderPlot({graphics()})
+```
+
+<table><tr><td class="control">`r A` `r C`</td><td class="plot">`r P`</td></tr></table>
+
+
+
+<style type="text/css">
+td.control {
+  border:1px solid gray;
+  border-radius:10px;
+  padding: 5px;
+  vertical-align: top;
+}
+td.plot {
+  border:1px solid gray;
+  padding: 5px;
+  border-radius:10px;
+  color: white;
+}
+
+</style>
+
+

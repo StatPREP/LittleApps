@@ -29,7 +29,6 @@ the_data <- reactive({
   res <- NHANES
   res$keepers <- TRUE
   bounds <- input$eliminate
-  cat(capture.output(bounds))
   if (!is.null(bounds)) {
     response <- res[[input$response]]
     res$keepers <- response > bounds$ymax | response < bounds$ymin

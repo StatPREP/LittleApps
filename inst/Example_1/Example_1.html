@@ -174,19 +174,19 @@ library(shinydashboard)
 knitr::opts_chunk$set(echo = FALSE)
 source(system.file("test_single_file/app.R", package = "StatPREPshiny"))
 </script>
- 
+
 <script type="application/shiny-prerendered" data-context="server">
 learnr:::register_http_handlers(session, metadata = NULL)
 </script>
- 
+
 <script type="application/shiny-prerendered" data-context="server">
 eval(body(server))
 </script>
- 
+
 <script type="application/shiny-prerendered" data-context="server">
 output$login_message <- renderText({input$login; "This is the message."})
 </script>
- 
+
 <script type="application/shiny-prerendered" data-context="server">
 the_formula <- reactive(as.formula(paste(input$response, "~", input$explan)))
 
@@ -194,7 +194,6 @@ the_data <- reactive({
   res <- NHANES
   res$keepers <- TRUE
   bounds <- input$eliminate
-  cat(capture.output(bounds))
   if (!is.null(bounds)) {
     response <- res[[input$response]]
     res$keepers <- response > bounds$ymax | response < bounds$ymin
@@ -208,7 +207,6 @@ max_value <- reactive(max(NHANES[[input$response]]))
 graphics <- reactive({
     set.seed(101) # so the dots don't move around
     all_data <- the_data()
-    cat(capture.output(names(all_data)))
     keepers <- all_data[all_data$keepers,]
     A <- gf_jitter(the_formula(), data = keepers,
               width = 0.3, alpha = 0.1)
