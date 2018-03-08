@@ -1,0 +1,179 @@
+---
+title: "Resampling"
+runtime: shiny
+output: html_document
+---
+
+```{r include=FALSE}
+library(mosaicData)
+library(mosaicCore)
+library(ggformula)
+library(dplyr)
+knitr::opts_chunk$set(echo = TRUE)
+no_x_axis <- theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+```
+
+
+```{r echo = FALSE}
+samp_sizes <- c(5, 10, 20, 50, 100, 500)
+get_samp <- function(n) {
+  mosaicData::Galton %>% select(height, mother, sex) %>% 
+    sample_n(size = n) %>% 
+    mutate(x=1)
+}
+new_set <- function(possibilities) {
+  res <- lapply(possibilities, function(x) list())
+  names(res) <- as.character(possibilities)
+  res
+}
+new_set_df <- function(possibilities) {
+  res <- lapply(possibilities, function(x) data.frame(mean = NA, intercept = NA, slope = NA))
+  names(res) <- as.character(possibilities)
+  res
+}
+create_state <- function(samp_sizes) {
+  res <- list()
+  res$samps <- lapply(samp_sizes, get_samp)
+  names(res$samps) <- as.character(samp_sizes)
+  res$sizes <- samp_sizes
+  res$trials <- new_set(samp_sizes)
+  res$stats <- new_set_df(samp_sizes)
+  res$ntrials <- 0
+  
+  res
+}
+clear_state <- function(state) {
+  state$trials <- new_set(samp_sizes)
+  state$stats <- new_set_df(samp_sizes)
+  state$ntrials <- 0
+  
+  state
+}
+new_trial <- function(state) {
+  state$ntrials <- n <- state$ntrials + 1
+  set.seed(NULL)
+  for (sz in state$sizes) {
+    name <- as.character(sz)
+    state$trials[[name]][[n]] <- state$samps[[name]] %>%  sample_n(size = sz, replace = TRUE)
+    this_mean <- c(mean = mean(state$trials[[name]][[n]]$height, na.rm = TRUE))
+    this_coefs <- coef(lm(height ~ mother, data = state$trials[[name]][[n]])) 
+    names(this_coefs) <- c("intercept", "slope")
+    state$stats[[name]][n,] <- c(this_mean, this_coefs)
+  }
+  
+  state
+}
+
+N <- selectInput("samp_n", "Sample n", 
+                 choices = samp_sizes, selected = "20",
+                 width = "100px")
+A <- actionButton("new_trial", "New Trial")
+B <- actionButton("clear", "Clear trials")
+C <- checkboxInput("fit", "Show fit", TRUE, width = "150px")
+D <- checkboxInput("CI", "Show conf. interval", FALSE, width = "150px")
+Panel <- tabsetPanel(
+    tabPanel("One variable", plotOutput("r1")),
+    tabPanel("Two variables", plotOutput("r2"))
+  )
+
+```
+
+
+
+
+```{r echo = FALSE, context = "server"}
+S <- reactiveValues()
+
+S$state = create_state(samp_sizes)
+
+observeEvent(input$clear, {S$state <<- clear_state(S$state)})
+observeEvent(input$new_trial, S$state <<- new_trial(S$state))
+
+graphics_r1 <- reactive({
+  set.seed(101)
+  
+  P <- S$state$samp[[input$samp_n]] %>%
+    gf_jitter(height ~ x, shape = 1, size = 3, height = 0, width = 0.1 ) %>%
+    gf_labs(x = "", y = "Height (in)") %>%
+    gf_lims(x = c(0.5, 1.5)) %>%
+    gf_theme(no_x_axis)
+  if (input$fit) {
+    mn <- mean(S$state$samp[[input$samp_n]]$height, na.rm = TRUE)
+    P <- P %>% gf_hline(yintercept = mn, size = 2)
+  }
+ 
+  if (S$state$ntrials > 0) {
+    P <- P %>% gf_jitter(height ~ I(x-.2), 
+                         data = S$state$trials[[input$samp_n]][[S$state$ntrials]], 
+                         height = 0, color = "red", width = 0.1) 
+    if (input$fit) {
+      P <- P %>% gf_hline(yintercept = S$state$stats[[input$samp_n]]$mean, color = "red", alpha = 0.5)
+    }
+  }
+  if (input$CI) {
+    tmp <- df_stats(~ height, data = S$state$samp[[input$samp_n]], a = ci.mean) %>% mutate(x = 1.2)
+    P <- P %>% gf_errorbar(a_height_upper + a_height_lower ~ x, data = tmp, 
+                           color = "blue", size = 2, width = .1)
+  }
+
+  P
+})
+
+
+graphics_r2 <- reactive({
+  set.seed(101)
+  
+  P <- S$state$samp[[input$samp_n]] %>%
+    gf_jitter(height ~ mother, shape = 1, size = 3, height = 0.0, width = 0.25, alpha = .5 ) %>%
+    gf_labs(x = "Mother's height", y = "Child's Height (in)") 
+  if (input$fit) {
+    fit <- coef(lm(height ~ mother, data = S$state$samp[[input$samp_n]]))
+    P <- P %>% gf_abline(intercept=fit[1], slope = fit[2], size = 2, color = "blue")
+  }
+  
+  if (S$state$ntrials > 0) {
+    P <- P %>% gf_jitter(height ~ mother, 
+                         data = S$state$trials[[input$samp_n]][[S$state$ntrials]], 
+                         height = 0.25, color = "red", width = 0.25, alpha = .5) 
+    if (input$fit) {
+      P <- P %>% gf_abline(intercept = S$state$stats[[input$samp_n]]$intercept,
+                           slope = S$state$stats[[input$samp_n]]$slope, color = "red", alpha = 0.5)
+    }
+  }
+  if (input$CI) {
+    P <- P %>% gf_smooth(height ~ mother, method = "lm", data = S$state$samp[[input$samp_n]])
+  }
+
+  P
+})
+
+output$r1 <- renderPlot(graphics_r1())
+output$r2 <- renderPlot(graphics_r2())
+
+output$raw <- renderTable(get_samp())
+```
+
+<table><tr><td class="control">`r A` `r N` `r C` `r D` `r B`</td><td class="plot">`r Panel`</td></tr></table>
+
+
+
+<style type="text/css">
+td.control {
+  border:1px solid gray;
+  border-radius:10px;
+  padding: 5px;
+  vertical-align: top;
+}
+td.plot {
+  border:1px solid gray;
+  padding: 5px;
+  border-radius:10px;
+  color: white;
+}
+
+`r tableOutput("raw")`
+</style>
+
+
