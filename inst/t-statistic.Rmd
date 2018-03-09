@@ -1,0 +1,150 @@
+---
+title: "Two-sample t test"
+runtime: shiny
+output: html_document
+---
+
+
+```{r include = FALSE}
+library(mosaic)
+library(mosaicCore)
+library(mosaicData)
+library(ggformula)
+library(dplyr)
+library(NHANES)
+explanatory_vars <- c("Gender", "HomeOwn", "SmokeNow", "SexEver", "PregnantNow", "Depressed", "Work", "PhysActive" )
+response_vars <- c("Pulse", "BMI", "TotChol", "BPSys1", "UrineVol1")
+NHANES <- NHANES %>% filter(Age >= 18)
+```
+
+```{r BOGUS, eval = FALSE, echo = FALSE}
+input <- list(response = "BMI", explan = "SmokeNow", samp_n = "200", seed = "1", equal_var = TRUE,
+              layers = c("T", "Conf. interval"), show_90_level = TRUE, center_on = "bottom")
+
+```
+
+
+```{r echo = FALSE}
+A <- selectInput("response", "Response variable",
+                 choices = response_vars, width = "150px")
+B <- selectInput("explan", "Explanatory variable",
+                 choices = explanatory_vars, width = "150px")
+N <- selectInput("samp_n", "Sample size:", choices = c(5, 10, 20, 50, 100, 500, 1000),
+                 selected = "50", width = "100px")
+C <- checkboxGroupInput("layers", "Inferential statistics",
+                        c("T", "Conf. interval"), width = "150px", inline = TRUE)
+NINETY <- checkboxInput("show_90_level", "CI at 90%", FALSE)
+SEED <- actionButton("seed", "Another sample")
+EV <- checkboxInput("equal_var", "Assume equal variance", FALSE)
+CENTER <- radioButtons("center_on", "T location:", choices = c("Left", "Right"), inline = TRUE)
+P <- plotOutput("plot1", width = "500px",
+                brush = brushOpts("horiz_line", direction = "x", fill = NA))
+keepers <- list(
+  PregnantNow = c("Yes", "No"),
+  SmokeNow = c("Yes", "No"),
+  HomeOwn = c("Own", "Rent"), 
+  Depressed = c("None", "Most"),
+  Work = c("Working", "NotWorking"),
+  PhysActive = c("Yes", "No"),
+  SexEver = c("Yes", "No"),
+  Gender = c("male", "female")
+)
+
+```
+
+<table><tr><td class="control">`r A` `r B` `r N` `r C` `r SEED` `r EV` `r CENTER` `r NINETY`</td><td class="plot">`r P`</td></tr></table>
+
+
+
+<style type="text/css">
+td.control {
+  border:5px solid gray;
+  border-radius:10px;
+  padding: 5px;
+  vertical-align: top;
+}
+td.plot {
+  border:5px solid gray;
+  padding: 5px;
+  border-radius:10px;
+  color: white;
+}
+
+</style>
+
+
+
+
+```{r context = "server", echo = FALSE}
+the_formula <- reactive({
+  as.formula(paste(input$response, "~", input$explan))
+})
+get_data <- reactive({
+  res <- NHANES[, all.vars(the_formula())] %>% na.omit()
+  res[res[[input$explan]] %in% keepers[[input$explan]], ]
+})
+samp_n <- reactive( {
+  as.numeric(input$samp_n)
+})
+get_samp <- reactive( {
+  set.seed(as.numeric(input$seed))
+  get_data() %>% sample_n(size = samp_n())
+})
+point_alpha <- reactive( {
+  0.8 / 2^log10(samp_n()) # a trick?
+})
+the_color <- reactive( {
+  the_formula()[c(1,3)]
+})
+the_width = reactive( {0.1} )
+stats_interval <- reactive( {
+  this_level <- ifelse(input$show_90_level, .9, .95)
+  df_stats(the_formula(), data = get_samp(), 
+           mn = mean, ci = ci.mean(level = !!this_level), long_names = FALSE) %>% 
+    mutate(xpos = c(1.25, 1.75))
+})
+t_interval <- reactive( {
+  tmp <- stats::t.test(the_formula(), data = get_samp(), var.equal = input$equal_var)
+  
+  if (input$center_on == "Left") { 
+    res <- tmp$estimate[2] + tmp$conf.int 
+    #res <- res + abs(diff(tmp$estimate))
+  } else {
+    res <- tmp$estimate[1] - tmp$conf.int 
+    #res <- res - abs(diff(tmp$estimate))
+  }
+  res <- as.list(res)
+  names(res) <- c("low", "high")
+  res$midpoint <- 1.5
+  as.data.frame(res)
+})
+
+graphics <- reactive( {
+  set.seed(101)
+  P <- gf_jitter(the_formula(), data = get_samp(), 
+                 color = the_color(),
+                 alpha = point_alpha(),
+                 width = the_width(), 
+                 height = 0,
+                 show.legend = FALSE)
+  
+  P <- P %>% gf_errorbar(mn + mn ~ xpos, 
+                        data = stats_interval(), color = the_color(), 
+                      show.legend = FALSE, width = 3*the_width(), size=2, alpha = .5) 
+  if ("Conf. interval" %in% input$layers) {
+    P <- P %>%
+      gf_errorbar(as.formula(paste("ci_lower + ci_upper ~ ", input$explan)), data = stats_interval(), 
+                  color = the_color(), width = 1.3*the_width(), size = 2, show.legend = FALSE)
+  }
+  
+  if ("T" %in% input$layers) {
+    P <- P %>% 
+      gf_errorbar(low + high ~ midpoint, data = t_interval(), width = 1, show.legend = FALSE)
+  }
+  set.seed(NULL)
+  P
+})
+
+output$plot1 <- renderPlot(graphics())
+```
+
