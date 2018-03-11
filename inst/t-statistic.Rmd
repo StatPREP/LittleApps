@@ -12,8 +12,9 @@ library(mosaicData)
 library(ggformula)
 library(dplyr)
 library(NHANES)
+library(StatPREPshiny)
 explanatory_vars <- c("Gender", "HomeOwn", "SmokeNow", "SexEver", "PregnantNow", "Depressed", "Work", "PhysActive" )
-response_vars <- c("Pulse", "BMI", "TotChol", "BPSys1", "UrineVol1")
+response_vars <- c("Age", "Poverty", "Pulse", "BMI", "TotChol", "BPSys1", "UrineVol1", "Weight", "Height", "DaysMentHlthBad", "LittleInterest", "Age1stBaby", "PhysActiveDays", "SexNumPartnLife")
 NHANES <- NHANES %>% filter(Age >= 18)
 ```
 
@@ -37,6 +38,7 @@ NINETY <- checkboxInput("show_90_level", "CI at 90%", FALSE)
 SEED <- actionButton("seed", "Another sample")
 EV <- checkboxInput("equal_var", "Assume equal variance", FALSE)
 CENTER <- radioButtons("center_on", "T location:", choices = c("Left", "Right"), inline = TRUE)
+PV <- htmlOutput("pvalue")
 P <- plotOutput("plot1", width = "500px",
                 brush = brushOpts("horiz_line", direction = "x", fill = NA))
 keepers <- list(
@@ -47,12 +49,13 @@ keepers <- list(
   Work = c("Working", "NotWorking"),
   PhysActive = c("Yes", "No"),
   SexEver = c("Yes", "No"),
-  Gender = c("male", "female")
+  Gender = c("male", "female"),
+  LittleInterest = c("None", "AlmostAll")
 )
 
 ```
 
-<table><tr><td class="control">`r A` `r B` `r N` `r C` `r SEED` `r EV` `r CENTER` `r NINETY`</td><td class="plot">`r P`</td></tr></table>
+<table><tr><td class="control">`r A` `r B` `r N` `r C` `r PV` `r SEED` `r EV` `r CENTER` `r NINETY`  </td><td class="plot">`r P`</td></tr></table>
 
 
 
@@ -91,7 +94,7 @@ get_samp <- reactive( {
   get_data() %>% sample_n(size = samp_n())
 })
 point_alpha <- reactive( {
-  0.8 / 2^log10(samp_n()) # a trick?
+  pmin(1, 1.2 / 2^log10(samp_n())) # a trick?
 })
 the_color <- reactive( {
   the_formula()[c(1,3)]
@@ -103,6 +106,11 @@ stats_interval <- reactive( {
            mn = mean, ci = ci.mean(level = !!this_level), long_names = FALSE) %>% 
     mutate(xpos = c(1.25, 1.75))
 })
+
+output$pvalue <- renderText({
+  if ("T" %in% input$layers ) nice_p(t_interval()$p.value)
+  else ""})
+
 t_interval <- reactive( {
   tmp <- stats::t.test(the_formula(), data = get_samp(), var.equal = input$equal_var)
   
@@ -116,9 +124,9 @@ t_interval <- reactive( {
   res <- as.list(res)
   names(res) <- c("low", "high")
   res$midpoint <- 1.5
+  res$p.value <- tmp$p.value
   as.data.frame(res)
 })
-
 graphics <- reactive( {
   set.seed(101)
   P <- gf_jitter(the_formula(), data = get_samp(), 
@@ -138,8 +146,9 @@ graphics <- reactive( {
   }
   
   if ("T" %in% input$layers) {
+    tstats <- t_interval()
     P <- P %>% 
-      gf_errorbar(low + high ~ midpoint, data = t_interval(), width = 1, show.legend = FALSE)
+      gf_errorbar(low + high ~ midpoint, data = tstats, width = 1, show.legend = FALSE) 
   }
   set.seed(NULL)
   P
