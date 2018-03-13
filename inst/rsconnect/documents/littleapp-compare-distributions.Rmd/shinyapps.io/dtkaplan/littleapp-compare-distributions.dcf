@@ -1,0 +1,13 @@
+name: littleapp-compare-distributions
+title: littleapp-compare-distributions
+username:
+account: dtkaplan
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 298735
+bundleId: 1266736
+url: https://dtkaplan.shinyapps.io/littleapp-compare-distributions/
+when: 1520964896.34266
+asMultiple: TRUE
+asStatic: FALSE
+ignoredFiles: littleapp-density-graphs.Rmd|littleapp-generate-resamples.Rmd|littleapp-sampling-variation-density.Rmd|littleapp-stem-and-leaf.Rmd|littleapp-t-statistic.Rmd|littleapp-why-density.Rmd

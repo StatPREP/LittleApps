@@ -74,8 +74,8 @@ B <- actionButton("clear", "Clear trials")
 C <- checkboxInput("fit", "Show fit", TRUE, width = "150px")
 D <- checkboxInput("CI", "Show conf. interval", FALSE, width = "150px")
 Panel <- tabsetPanel(
-    tabPanel("One variable", plotOutput("r1")),
-    tabPanel("Two variables", plotOutput("r2"))
+    tabPanel("One variable", plotOutput("r1", width = "300px")),
+    tabPanel("Two variables", plotOutput("r2", width = "400px"))
   )
 
 ```

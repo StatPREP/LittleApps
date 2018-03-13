@@ -10,10 +10,13 @@ library(ggformula)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 ```{r echo = FALSE}
 A <- selectInput("response", "Response variable",
-                 choices = c("Weight", "Height"), width = "100px")
+                 choices = c("Weight", "Height", "Poverty", "Pulse", 
+                             "BMI", "TotChol", "BPSys1", "UrineVol1", 
+                             "Testosterone", "Age"), 
+                 width = "100px")
+Facet <- selectInput("facet", "Explanatory var.", choices = c("None", "Gender", "HomeOwn", "SmokeNow", "SexEver", "PregnantNow", "Depressed", "Work", "PhysActive", "AgeDecade" ), width = "100px")
 C <- checkboxGroupInput("layers", "Graphics layers:",
                         c("density", "histogram"), width = "100px")
 S <- sliderInput("bw", "Smoothing:", min = 1, max = 20, value = 3, width = "150px")
@@ -25,24 +28,44 @@ P <- plotOutput("plot1", width = "500px",
 
 
 ```{r echo = FALSE, context = "server"}
-the_formula <- reactive(as.formula(paste("yval ~", input$response)))
+the_formula <- reactive({
+  basic <- paste("yval ~", input$response)
+  if (input$facet != "None" ) basic <- paste(basic, "|", input$facet)
+  as.formula(basic)
+  })
+the_formula2 <- reactive({
+  basic <- paste("~", input$response)
+  if (input$facet != "None" ) basic <- paste(basic, "|", input$facet)
+  as.formula(basic)
+})
 
 the_data <- reactive({
   res <- NHANES
   res$yval = 1.1 * max_y_value() 
   res$keepers <- TRUE
-  bounds <- input$eliminate
-  if (!is.null(bounds)) {
-    response <- res[[input$response]]
-    res$keepers <- response > bounds$xmax | response < bounds$xmin
-  }
 
   res
 })
 
+observe({
+  req(input$response)
+  M <- diff(range(the_data()[[input$response]], na.rm = TRUE))
+  M <- 10^floor(log10(M))
+  
+  updateSliderInput(session, "bw", max = M/5, min = M/250, value = M/20, step = M/250)
+})
+
 max_y_value <- reactive(switch(input$response, 
                              "Weight" = 0.018,
-                             "Height" = 0.031))
+                             "Height" = 0.031,
+                             "Testosterone" = 0.01,
+                             "TotChol" = 0.12,
+                             "Pulse"   = 0.35,
+                             "BPSys1"  = 0.03,
+                             "UrineVol1" = 0.01,
+                             "BMI"     = 0.055,
+                             "Age"     = 0.015,
+                             "Poverty" = 0.5))
                       
 max_x_value <- reactive(max(NHANES[[input$response]], na.rm = TRUE))
 
@@ -56,11 +79,11 @@ graphics <- reactive({
                    height = 0.1 * max_y_value(),
                    size = bw() / 10)
     if ("density" %in% input$layers)
-      A <- A %>% gf_density(data = keepers, alpha = 0.5, 
+      A <- A %>% gf_density(the_formula2(), data = keepers, alpha = 0.5, 
                             color = "blue", fill = "blue",
                             bw = bw())
     if ("histogram" %in% input$layers)
-      A <- A %>% gf_dhistogram(data = keepers, 
+      A <- A %>% gf_dhistogram(the_formula2(), data = keepers, 
                                alpha = 0.7, color = "black", fill = NA,
                                binwidth = bw() / 0.5)
     return(A %>% 
@@ -74,7 +97,7 @@ graphics <- reactive({
 output$plot1 <- renderPlot({graphics()})
 ```
 
-<table><tr><td class="control">`r A` `r C` `r S`</td><td class="plot">`r P`</td></tr></table>
+<table><tr><td class="control">`r A` `r Facet` `r C` `r S`</td><td class="plot">`r P`</td></tr></table>
 
 
 
