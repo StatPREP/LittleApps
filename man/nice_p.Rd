@@ -4,7 +4,7 @@
 \alias{nice_p}
 \title{Print p-values nicely}
 \usage{
-nice_p(p, n)
+nice_p(p, n = 2)
 }
 \arguments{
 \item{p}{the p-value}

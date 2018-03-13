@@ -1,0 +1,182 @@
+---
+title: "Stem-and-leaf plots"
+runtime: shiny
+output: html_document
+---
+
+```{r include=FALSE}
+library(NHANES)
+library(ggformula)
+library(StatPREPshiny)
+library(dplyr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo = FALSE}
+
+the_stem <- function(){
+  res <- capture.output(stem(get_sample()))
+  gsub("( *The|is|of)", "", res)
+}
+the_scale <- reactive({
+  ifelse(grepl("left", the_stem()[2]), -1, 1) * 
+    suppressWarnings(as.numeric(gsub("[^0-9]","", the_stem()[2])))
+})
+form_stem_chars <- reactive({
+  res <- str_to_df(req(the_stem()))
+  res$orig <- NA
+  # find the rows corresponding to data points
+  is_number <- grepl("[0-9]", res$letter) & res$col > 5 & res$row < -3
+  res[is_number,"orig"] <- sort(req(get_sample()))[1:sum(is_number)]
+  
+  res
+})
+
+
+the_leading_digits <- reactive({
+  res <- suppressWarnings(as.numeric(gsub("(^ *| \\| [0-9]*$)", "", the_stem()))) * 
+    10^the_scale() 
+  res[! is.na(res)]
+})
+the_line_val <- reactive({trunc(get_sample() * 10^(-the_scale())) * 10^the_scale()})
+the_next_digit <- reactive({round(.05 + (get_sample() - the_line_val()) * 10^(1-the_scale()))})
+the_line <- reactive({sapply(the_line_val(), function(x) which(x == the_leading_digits()))})
+
+
+
+stem_info <- reactive({
+  data.frame(val = get_data(), 
+             the_line = 3 + the_line(), 
+             line_val = the_line_val(), 
+             next_digit = as.character(the_next_digit()),
+             stringsAsFactors = FALSE)
+})
+```
+
+
+```{r echo = FALSE}
+RAW <- htmlOutput("raw")
+A <- selectInput("response", "Response variable",
+                 choices = c("Weight", "Height"), width = "100px")
+samp_n_choices <- c(2, 5, 10, 20, 50, 100, 200)
+NS <- selectInput("samp_n", "Sample size:", 
+                  choices = samp_n_choices,
+                  selected = samp_n_choices[3], 
+                  width = "100px")
+SHOW <- htmlOutput("show_val", width = "200px")
+QUIZ <- actionButton("quiz", "Quiz")
+QSHOW <- htmlOutput("show_quiz", width = "150px")
+WIN <- htmlOutput("win", width = "150px")
+P <- plotOutput("plot1", width = "500px",
+                click = clickOpts("user_selected"))
+```
+
+```{r echo = FALSE, context = "server"}
+state <- reactiveValues()
+state$selected_x <- NA
+state$selected_y <- NA
+state$plot_characters <- NA
+observe({
+  state$plot_characters <<- characters()
+})
+observe({
+  state$selected_x <<- req(input$user_selected$x)
+  state$selected_y <<- req(input$user_selected$y)
+})
+
+get_data <- reactive({
+  NHANES[req(input$response)] %>% na.omit() %>% sample_n(size = 200) %>% .[[1]]
+})
+get_sample <- reactive({
+  get_data()[seq(1, as.numeric(req(input$samp_n)))]
+})
+
+ output$win <- renderText({
+   "Yes"
+   if (req(input$quiz) == 0 ) ""
+  else if (quiz_number() == req(selected_number())) 
+    sample(c("RIGHT!", "YES!", "Good job!", "Nice!"),1)
+  else paste(req(selected_number()), "isn't right.")
+ })
+
+characters <- reactive({
+  res <- form_stem_chars()
+  
+  if (! is.na(state$selected_x)) {
+    row_selected <- row_from_xy(res, state$selected_x, state$selected_y)
+    res[row_selected, "background_color"] = "red"
+    res[row_selected, "background_alpha"] = 0.5
+  }
+  res
+})
+click_pos <- reactive({
+  if (!is.null(input$user_selected)) {
+    state$selected_x <- input$user_selected$x
+    state$selected_y <- input$user_selected$y
+  }
+})
+
+graphics <- reactive({
+  if (inherits(state$plot_characters, "data.frame"))
+    gf_characters(textdf=state$plot_characters) 
+  })
+
+selected_number <- reactive({
+  V <- if (is.na(state$selected_x) || is.na(state$selected_y) ) {
+    NA
+  } else {
+    row <- row_from_xy(state$plot_characters, state$selected_x, state$selected_y)
+    V <- state$plot_characters[row,]$orig
+  }
+  V
+})
+output$show_val <- renderText({
+  this_val <- selected_number()
+  if (is.na(this_val) || length(this_val) == 0) "No selection yet."
+  else paste("You selected", this_val, ".\n")
+})
+output$plot1 <- renderPlot({graphics()})
+quiz_number <- reactive({
+  req(input$quiz)
+  sample(req(get_sample()), 1)
+})
+output$show_quiz <- renderText({
+  if (input$quiz > 0) paste("Find", quiz_number())
+})
+output$raw <- renderText({
+  chars <- paste0(capture.output(print(sort(get_sample()))), " ")
+  if (!is.na(selected_number())) {
+    # Get the number to print with the first decimal place, even when it ends with .0
+    digits <- paste0(gsub("^.* ", "", capture.output(print(c(108.4, selected_number()))), " "))
+    pattern <- paste0(" ", digits, " ")
+    replace <- paste0(' <span style="color:red;">', digits, "</span> ")
+    chars <- gsub(pattern, replace, chars)
+  }
+  paste0("<pre>", paste(chars, collapse = "<br>"), "</pre>")
+})
+
+```
+
+`r RAW`
+
+<table><tr><td class="control">`r A` `r NS` `r SHOW` `r QUIZ` `r QSHOW` `r WIN`</td><td class="plot">`r P`</td></tr></table>
+
+
+
+
+
+<style type="text/css">
+td.control {
+  border:5px solid gray;
+  border-radius:10px;
+  padding: 5px;
+  vertical-align: top;
+}
+td.plot {
+  border:5px solid gray;
+  padding: 5px;
+  border-radius:10px;
+  color: white;
+}
+
+</style>
