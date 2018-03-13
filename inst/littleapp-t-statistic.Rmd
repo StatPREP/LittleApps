@@ -53,6 +53,7 @@ keepers <- list(
   LittleInterest = c("None", "AlmostAll")
 )
 
+
 ```
 
 <table><tr><td class="control">`r A` `r B` `r N` `r C` `r PV` `r SEED` `r EV` `r CENTER` `r NINETY`  </td><td class="plot">`r P`</td></tr></table>
@@ -79,8 +80,14 @@ td.plot {
 
 
 ```{r context = "server", echo = FALSE}
+the_width <- reactive({0.1})
+point_alpha <- function(n) {
+  pmin(1, 1.2 / 2^log10(n)) # a trick?
+}
+
+
 the_formula <- reactive({
-  as.formula(paste(input$response, "~", input$explan))
+  as.formula(paste(req(input$response), "~", req(input$explan)))
 })
 get_data <- reactive({
   res <- NHANES[, all.vars(the_formula())] %>% na.omit()
@@ -93,13 +100,13 @@ get_samp <- reactive( {
   set.seed(as.numeric(input$seed))
   get_data() %>% sample_n(size = samp_n())
 })
-point_alpha <- reactive( {
-  pmin(1, 1.2 / 2^log10(samp_n())) # a trick?
-})
+
+
 the_color <- reactive( {
   the_formula()[c(1,3)]
 })
-the_width = reactive( {0.1} )
+
+
 stats_interval <- reactive( {
   this_level <- ifelse(input$show_90_level, .9, .95)
   df_stats(the_formula(), data = get_samp(), 
@@ -129,20 +136,28 @@ t_interval <- reactive( {
 })
 graphics <- reactive( {
   set.seed(101)
+  width_val <- 0.1
+  alpha_val <- point_alpha(samp_n())
+  color_formula <- the_color()
+  
+  # I am NOT able to get the color set. I think this is due to the way ggformula handles 
+  # arguments.
+
   P <- gf_jitter(the_formula(), data = get_samp(), 
-                 color = the_color(),
-                 alpha = point_alpha(),
-                 width = the_width(), 
+                 color = color_formula,
+                 alpha = alpha_val,
+                 width = 0.1,
                  height = 0,
                  show.legend = FALSE)
   
-  P <- P %>% gf_errorbar(mn + mn ~ xpos, 
-                        data = stats_interval(), color = the_color(), 
-                      show.legend = FALSE, width = 3*the_width(), size=2, alpha = .5) 
+  P <- P %>% gf_errorbar(mn + mn ~ xpos,
+                        data = stats_interval(), color = color_formula,
+                        show.legend = FALSE, width = 3 * 0.1, size=2, alpha = .5)
   if ("Conf. interval" %in% input$layers) {
     P <- P %>%
-      gf_errorbar(as.formula(paste("ci_lower + ci_upper ~ ", input$explan)), data = stats_interval(), 
-                  color = the_color(), width = 1.3*the_width(), size = 2, show.legend = FALSE)
+      gf_errorbar(as.formula(paste("ci_lower + ci_upper ~ ", input$explan)), data = stats_interval(),
+                  color = color_formula, 
+                  width = 1.3 * 0.1, size = 2, show.legend = FALSE)
   }
   
   if ("T" %in% input$layers) {

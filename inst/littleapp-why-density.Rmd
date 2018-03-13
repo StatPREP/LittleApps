@@ -15,9 +15,11 @@ NHANES <- NHANES %>% mutate(PregnantNow = ifelse(is.na(PregnantNow), "No", as.ch
 
 ```{r echo = FALSE}
 A <- selectInput("response", "Response variable",
-                 choices = c("pregnancy", "diabetes"), width = "100px")
+                 choices = c("Age", "Height", "Pulse", "UrineVol1"), width = "130px")
+B <- selectInput("explan", "Explanatory variable",                
+                 choices = c("PregnantNow", "Diabetes", "nBabies", "SmokeNow"), width = "130px")
 C <- radioButtons("display", "Type of display:",
-                        c("density", "histogram"), width = "100px")
+                        c("histogram", "density"), width = "130px")
 P <- plotOutput("plot1", width = "500px")
 ```
 
@@ -25,7 +27,7 @@ P <- plotOutput("plot1", width = "500px")
 
 
 ```{r echo = FALSE, context = "server"}
-the_formula <- reactive(as.formula(paste("~ Age | PregnantNow")))
+the_formula <- reactive(as.formula(paste("~", input$response, "|", input$explan)))
 
 
 
@@ -41,7 +43,7 @@ graphics <- reactive({
 output$plot1 <- renderPlot({graphics()})
 ```
 
-<table><tr><td class="control">`r A` `r C`</td><td class="plot">`r P`</td></tr></table>
+<table><tr><td class="control">`r A` `r B` `r C`</td><td class="plot">`r P`</td></tr></table>
 
 
 

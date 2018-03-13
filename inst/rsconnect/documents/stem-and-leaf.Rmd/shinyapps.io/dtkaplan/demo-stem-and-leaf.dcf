@@ -1,0 +1,12 @@
+name: demo-stem-and-leaf
+title: demo-stem-and-leaf
+username:
+account: dtkaplan
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 298475
+bundleId: 1266207
+url: https://dtkaplan.shinyapps.io/demo-stem-and-leaf/
+when: 1520950994.45016
+asMultiple: FALSE
+asStatic: FALSE

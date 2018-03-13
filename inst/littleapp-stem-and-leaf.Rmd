@@ -9,6 +9,7 @@ library(NHANES)
 library(ggformula)
 library(StatPREPshiny)
 library(dplyr)
+library(shinydashboard)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
