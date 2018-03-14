@@ -9,10 +9,10 @@ StatPREP_color_scale(levels, annot_levels = NULL, annot_colors = "red")
 \arguments{
 \item{levels}{vector of character strings with names of data levels}
 
-\item{annot_colors}{name or names of colors to use for the annotations. Default: \code{"red"}. These will be
-used in the same order as \code{annots} and repeated as needed.}
+\item{annot_levels}{vector of character strings with names of "annotation" levels}
 
-\item{annots}{vector of character strings with names of "annotation" levels}
+\item{annot_colors}{name or names of colors to use for the annotations. Default: \code{"red"}. These will be
+used in the same order as \code{annot_levels} and repeated as needed.}
 }
 \description{
 Generates a color scale for categorical values. If there are annotation levels, you can set the

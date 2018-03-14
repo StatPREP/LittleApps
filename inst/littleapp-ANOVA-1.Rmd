@@ -10,23 +10,21 @@ library(ggformula)
 library(dplyr)
 library(StatPREPshiny)
 knitr::opts_chunk$set(echo = TRUE)
+explanatory_vars <- c("Gender", "HomeOwn", "SmokeNow", "SexEver", "PregnantNow", "Depressed", "Work", "PhysActive" )
+response_vars <- c("Age", "Poverty", "Pulse", "BMI", "TotChol", "BPSys1", "UrineVol1", "Weight", "Height", "DaysMentHlthBad", "LittleInterest", "Age1stBaby", "PhysActiveDays", "SexNumPartnLife")
 ```
 
 
-In the t-test app, you saw a confidence interval on the difference in means between two groups. If both means were within the interval, the data aren't providing evidence that can rule out the possibility that the population mean of both groups is the same.
-
-In this app, we're going to extend the t-test from a difference between two groups to differences *among* several groups. 
-
 ```{r echo = FALSE}
 A <- selectInput("response", "Response variable",
-                 choices = c("Age", "Height", "Pulse", "UrineVol1"), width = "130px")
+                 choices = response_vars, width = "130px")
 B <- selectInput("explan", "Explanatory variable",                
-                 choices = c("PregnantNow", "Diabetes", "nBabies", "SmokeNow"), width = "130px")
+                 choices = explanatory_vars, width = "130px")
 SAMPN <- selectInput("samp_n", "Sample size:", choices = c(20, 50, 100, 200, 500, 1000),
                      selected = "50", width = "100px")
 SHOWSD <- checkboxInput("show_sd", "Show std. deviations", value = TRUE, width = "130px")
 STATS <- htmlOutput("stats")
-SEED <- actionButton("seed", "New Trial")
+SEED <- actionButton("seed", "New Sample")
 P <- plotOutput("plot1", width = "500px")
 ```
 
@@ -56,6 +54,7 @@ get_sample   <- reactive({
   res %>% na.omit() %>% sample_n(size = samp_n())
 
 })
+observe({updateActionButton(session, "seed", label = paste("New sample with n =", req(samp_n())))})
 response_name <- reactive({req(input$response)})
 explan_name   <- reactive({req(input$explan)})
 plot_formula  <- reactive({as.formula(paste(response_name(), "~", explan_name()))})
@@ -137,7 +136,7 @@ output$stats <- renderText({
             tmp$rsq, tmp$numdf, 100-tmp$rsq, tmp$dendf, signif(tmp$value,3))
   
   label = paste(
-    sprintf("R<sup>2</sup> = %g&percnt; &nbsp; &nbsp; &nbsp; 1 - R^<sup>2</sup> = %g&percnt;<br>", tmp$rsq, 100-tmp$rsq),
+    sprintf("R<sup>2</sup> = %g&percnt; &nbsp; &nbsp; &nbsp; 1 - R<sup>2</sup> = %g&percnt;<br>", tmp$rsq, 100-tmp$rsq),
     sprintf("Total df: %d &nbsp; mod df: %d &nbsp; res df: %d<br>", tmp$n, tmp$numdf, tmp$dendf),
     third,
     nice_p(tmp$pvalue),
@@ -148,7 +147,7 @@ output$stats <- renderText({
 })
 ```
   
-<table><tr><td class="control">`r SEED` `r SAMPN` `r A` `r B` `r SHOWSD` `r STATS`</td><td class="plot">`r P`</td></tr></table>
+<table><tr><td class="control">`r SAMPN` `r A` `r B` `r SHOWSD` `r STATS` `r SEED` </td><td class="plot">`r P`</td></tr></table>
 
 <style type="text/css">
 td.control {
