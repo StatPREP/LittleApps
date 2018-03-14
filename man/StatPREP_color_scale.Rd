@@ -4,16 +4,17 @@
 \alias{StatPREP_color_scale}
 \title{Color scale for categorical values}
 \usage{
-StatPREP_color_scale(levels, annots = NULL, annot_colors = "red")
+StatPREP_color_scale(levels, annot_levels = NULL, annot_colors = "red")
 }
 \arguments{
 \item{levels}{vector of character strings with names of data levels}
 
-\item{annots}{vector of character strings with names of "annotation" levels}
-
 \item{annot_colors}{name or names of colors to use for the annotations. Default: \code{"red"}. These will be
 used in the same order as \code{annots} and repeated as needed.}
+
+\item{annots}{vector of character strings with names of "annotation" levels}
 }
 \description{
-Generates a color scale for categorical values.
+Generates a color scale for categorical values. If there are annotation levels, you can set the
+color of those explicitly.
 }

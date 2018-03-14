@@ -25,7 +25,7 @@ B <- selectInput("explan", "Explanatory variable",
 SAMPN <- selectInput("samp_n", "Sample size:", choices = c(20, 50, 100, 200, 500, 1000),
                      selected = "50", width = "100px")
 SHOWSD <- checkboxInput("show_sd", "Show std. deviations", value = TRUE, width = "130px")
-
+STATS <- htmlOutput("stats")
 SEED <- actionButton("seed", "New Trial")
 P <- plotOutput("plot1", width = "500px")
 ```
@@ -80,7 +80,10 @@ fit_mod <- reactive({
 mod_stats <- reactive({
   res <- with(summary(fit_mod()), as.list(c(c(rsq = r.squared), fstatistic)))
   res$pvalue = 1 - pf(res$value, res$numdf, res$dendf)
-  
+  res$n = res$numdf + res$dendf + 1
+  res$numdf <- as.integer(res$numdf)
+  res$dendf <- as.integer(res$dendf)
+  cat("Stats are:", capture.output(res), "\n")
   res
 })
 annotated_model_values <- reactive({
@@ -121,24 +124,31 @@ graphics <- reactive({
   P %>% 
     gf_refine(
       scale_color_manual(
-      values = StatPREP_color_scale(explan_levels(), annots = c("model_vals", "raw_vals"))
+      values = StatPREP_color_scale(explan_levels(), 
+                                    annot_levels = c("model_vals", "raw_vals"), 
+                                    annot_colors  =c("tomato1", "tomato2"))
       )) %>% gf_theme(legend.position = "none")
 })
 output$plot1 <- renderPlot({graphics()}) 
-output$tab <- renderTable("hoo")
+output$stats <- renderText({
+  tmp <- mod_stats()
+  tmp$rsq <- signif(100*tmp$rsq, 3)
+  third <- sprintf("F = R<sup>2</sup>/moddf ÷ (1 - R<sup>2</sup>)/resdf<br> &nbsp; &nbsp;  = (%g/%d) ÷ (%g/%d) ➼ %g<br>",
+            tmp$rsq, tmp$numdf, 100-tmp$rsq, tmp$dendf, signif(tmp$value,3))
+  
+  label = paste(
+    sprintf("R<sup>2</sup> = %g&percnt; &nbsp; &nbsp; &nbsp; 1 - R^<sup>2</sup> = %g&percnt;<br>", tmp$rsq, 100-tmp$rsq),
+    sprintf("Total df: %d &nbsp; mod df: %d &nbsp; res df: %d<br>", tmp$n, tmp$numdf, tmp$dendf),
+    third,
+    nice_p(tmp$pvalue),
+    collapse = "\n\n")
+  
+  cat("label is:", label, "\n")
+  label
+})
 ```
   
-
-
-
-
-```{r echo = FALSE, context = "server"}
-
-```
-
-<table><tr><td class="control">`r SEED` `r SAMPN` `r A` `r B` `r SHOWSD`</td><td class="plot">`r P`</td></tr></table>
-
-`r tableOutput("hoo")`
+<table><tr><td class="control">`r SEED` `r SAMPN` `r A` `r B` `r SHOWSD` `r STATS`</td><td class="plot">`r P`</td></tr></table>
 
 <style type="text/css">
 td.control {
