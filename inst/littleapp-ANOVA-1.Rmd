@@ -1,0 +1,159 @@
+---
+title: "ANOVA with one explanatory variable"
+runtime: shiny
+output: html_document
+---
+
+```{r include=FALSE}
+library(NHANES)
+library(ggformula)
+library(dplyr)
+library(StatPREPshiny)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+In the t-test app, you saw a confidence interval on the difference in means between two groups. If both means were within the interval, the data aren't providing evidence that can rule out the possibility that the population mean of both groups is the same.
+
+In this app, we're going to extend the t-test from a difference between two groups to differences *among* several groups. 
+
+```{r echo = FALSE}
+A <- selectInput("response", "Response variable",
+                 choices = c("Age", "Height", "Pulse", "UrineVol1"), width = "130px")
+B <- selectInput("explan", "Explanatory variable",                
+                 choices = c("PregnantNow", "Diabetes", "nBabies", "SmokeNow"), width = "130px")
+SAMPN <- selectInput("samp_n", "Sample size:", choices = c(20, 50, 100, 200, 500, 1000),
+                     selected = "50", width = "100px")
+SHOWSD <- checkboxInput("show_sd", "Show std. deviations", value = TRUE, width = "130px")
+
+SEED <- actionButton("seed", "New Trial")
+P <- plotOutput("plot1", width = "500px")
+```
+
+
+```{r echo = FALSE}
+# For the package??
+annotate_factor  <- function(x, before = NULL, after = NULL) {
+  x <- as.factor(x)
+
+  factor(x, levels = c(before, levels(x), after))
+}
+```
+
+
+```{r context = "server", echo = FALSE}
+get_data_frame <- function() {NHANES}
+get_sample   <- reactive({
+  set.seed(input$seed)
+  df <- get_data_frame()
+  resp   <- df[[response_name()]]
+  explan <- factor(df[[explan_name()]])
+  explan <- annotate_factor(explan, after = c("  ", "model_vals", "raw_vals"))
+  
+  res <- data.frame(explan, resp, color = explan)
+  names(res) <- c(explan_name(), response_name(), "color")
+  
+  res %>% na.omit() %>% sample_n(size = samp_n())
+
+})
+response_name <- reactive({req(input$response)})
+explan_name   <- reactive({req(input$explan)})
+plot_formula  <- reactive({as.formula(paste(response_name(), "~", explan_name()))})
+color_formula <- reactive({as.formula(paste("~", explan_name()))})
+model_val_formula <- reactive({
+  as.formula(paste(response_name(), "+", response_name(), "~", explan_name()))
+})
+sd_formula    <- reactive({
+  as.formula(paste("middle + top ~ ", explan_name()))
+})
+explan_levels <- reactive({
+  as.character(unique(get_data_frame()[[explan_name()]]))
+})
+samp_n       <- reactive({as.numeric(req(input$samp_n))})
+
+color_scale <- reactive({
+  StatPREP_color_scale(explan_levels())
+})
+fit_mod <- reactive({
+  lm(plot_formula(), data = get_sample())
+})
+mod_stats <- reactive({
+  res <- with(summary(fit_mod()), as.list(c(c(rsq = r.squared), fstatistic)))
+  res$pvalue = 1 - pf(res$value, res$numdf, res$dendf)
+  
+  res
+})
+annotated_model_values <- reactive({
+  mod <- fit_mod()
+  data <- get_sample()
+  cat("Data names: ", capture.output(names(data)), "\n")
+
+  explan <- data[[explan_name()]]
+  val <- predict(mod, newdata = data[explan_name()])
+  raw <- data[[response_name()]]
+  values <- c(raw, val)
+  category <- factor(c(rep("raw_vals", nrow(data)), 
+                       rep("model_vals", nrow(data))), 
+                     levels = levels(explan))
+  res <- data.frame(explan, val, orig_explan = explan)
+  res2 <- data.frame(explan = category, val = values, 
+                     orig_explan = factor(rep(explan, 2), levels = levels(explan)))
+  res <- rbind(res, res2)
+  names(res) <- c(explan_name(), response_name(), "orig_explan")
+  res$color <- res[[explan_name()]]
+  res
+})
+
+Stats <- reactive({
+  df_stats(plot_formula(), data = annotated_model_values(),
+           middle = mean, s = sd, long_names = FALSE ) %>% 
+  na.omit() %>%
+  mutate(top = middle + s )
+})
+graphics <- reactive({
+  P <- gf_errorbar(model_val_formula(), 
+              data = unique(annotated_model_values()), 
+              color = ~ color) %>%
+       gf_jitter(plot_formula(), data = get_sample(), color = color_formula(), height = 0, width = 0.1) 
+  if (input$show_sd) 
+    P <- P %>% gf_linerange(sd_formula(), data = Stats(), color = "black", size = 5, alpha = 0.5)
+  
+  P %>% 
+    gf_refine(
+      scale_color_manual(
+      values = StatPREP_color_scale(explan_levels(), annots = c("model_vals", "raw_vals"))
+      )) %>% gf_theme(legend.position = "none")
+})
+output$plot1 <- renderPlot({graphics()}) 
+output$tab <- renderTable("hoo")
+```
+  
+
+
+
+
+```{r echo = FALSE, context = "server"}
+
+```
+
+<table><tr><td class="control">`r SEED` `r SAMPN` `r A` `r B` `r SHOWSD`</td><td class="plot">`r P`</td></tr></table>
+
+`r tableOutput("hoo")`
+
+<style type="text/css">
+td.control {
+  border:1px solid gray;
+  border-radius:10px;
+  padding: 5px;
+  vertical-align: top;
+}
+td.plot {
+  border:1px solid gray;
+  padding: 5px;
+  border-radius:10px;
+  color: white;
+}
+
+</style>
+
+
