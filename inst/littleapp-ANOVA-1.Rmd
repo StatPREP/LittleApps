@@ -23,9 +23,11 @@ B <- selectInput("explan", "Explanatory variable",
 SAMPN <- selectInput("samp_n", "Sample size:", choices = c(20, 50, 100, 200, 500, 1000),
                      selected = "50", width = "100px")
 SHOWSD <- checkboxInput("show_sd", "Show std. deviations", value = TRUE, width = "130px")
-STATS <- htmlOutput("stats")
+STATS <- verbatimTextOutput("r-and-p")
+F_REPORT <- verbatimTextOutput("stats")
 SEED <- actionButton("seed", "New Sample")
-P <- plotOutput("plot1", width = "500px")
+PLOT <- plotOutput("plot1", width = "500px")
+DISPLAY <- tabsetPanel(tabPanel("Graphics", PLOT), tabPanel("F-test", F_REPORT))
 ```
 
 
@@ -82,14 +84,11 @@ mod_stats <- reactive({
   res$n = res$numdf + res$dendf + 1
   res$numdf <- as.integer(res$numdf)
   res$dendf <- as.integer(res$dendf)
-  cat("Stats are:", capture.output(res), "\n")
   res
 })
 annotated_model_values <- reactive({
   mod <- fit_mod()
   data <- get_sample()
-  cat("Data names: ", capture.output(names(data)), "\n")
-
   explan <- data[[explan_name()]]
   val <- predict(mod, newdata = data[explan_name()])
   raw <- data[[response_name()]]
@@ -128,26 +127,34 @@ graphics <- reactive({
                                     annot_colors  =c("tomato1", "tomato2"))
       )) %>% gf_theme(legend.position = "none")
 })
-output$plot1 <- renderPlot({graphics()}) 
+r_and_p_string <- reactive({
+  tmp <- mod_stats()
+  tmp$rsq <- signif(100*tmp$rsq, 3)
+  
+  sprintf("R²  = %g%%\n1-R²=%g%%\n%s",
+          tmp$rsq, 100-tmp$rsq, nice_p(tmp$pvalue))
+})
+output$plot1 <- renderPlot({graphics()})
+output$`r-and-p` <- renderText({r_and_p_string()})
 output$stats <- renderText({
   tmp <- mod_stats()
   tmp$rsq <- signif(100*tmp$rsq, 3)
-  third <- sprintf("F = R<sup>2</sup>/moddf ÷ (1 - R<sup>2</sup>)/resdf<br> &nbsp; &nbsp;  = (%g/%d) ÷ (%g/%d) ➼ %g<br>",
+  third <- sprintf("F = R²/df_mod ÷ (1-R²)/df_res\n  = (%g/%d) ÷ (%g/%d) = %g\n",
             tmp$rsq, tmp$numdf, 100-tmp$rsq, tmp$dendf, signif(tmp$value,3))
   
-  label = paste(
-    sprintf("R<sup>2</sup> = %g&percnt; &nbsp; &nbsp; &nbsp; 1 - R<sup>2</sup> = %g&percnt;<br>", tmp$rsq, 100-tmp$rsq),
-    sprintf("Total df: %d &nbsp; mod df: %d &nbsp; res df: %d<br>", tmp$n, tmp$numdf, tmp$dendf),
+  label = paste0(
+    sprintf("R²=%g%%     1-R²= %g%%\n", tmp$rsq, 100-tmp$rsq),
+    sprintf("Deg. Freedom: Total %d, model %d, resids %d\n", tmp$n, tmp$numdf, tmp$dendf),
     third,
-    nice_p(tmp$pvalue),
-    collapse = "\n\n")
+    sprintf("F=%g with %d and %d df ➼ %s", signif(tmp$value,3), 
+            tmp$numdf, tmp$dendf, nice_p(tmp$pvalue)),
+    collapse = "")
   
-  cat("label is:", label, "\n")
   label
 })
 ```
   
-<table><tr><td class="control">`r SAMPN` `r A` `r B` `r SHOWSD` `r STATS` `r SEED` </td><td class="plot">`r P`</td></tr></table>
+<table><tr><td class="control">`r SAMPN` `r A` `r B` `r SHOWSD` `r STATS` `r SEED` </td><td class="plot">`r DISPLAY`</td></tr></table>
 
 <style type="text/css">
 td.control {

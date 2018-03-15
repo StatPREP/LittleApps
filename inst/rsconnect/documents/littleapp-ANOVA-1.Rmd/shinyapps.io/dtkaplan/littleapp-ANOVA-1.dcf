@@ -1,0 +1,12 @@
+name: littleapp-ANOVA-1
+title: littleapp-ANOVA-1
+username:
+account: dtkaplan
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 299555
+bundleId: 1268938
+url: https://dtkaplan.shinyapps.io/littleapp-ANOVA-1/
+when: 1521058960.01453
+asMultiple: FALSE
+asStatic: FALSE
