@@ -1,0 +1,12 @@
+name: littleapp-proportions
+title: littleapp-proportions
+username:
+account: dtkaplan
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 301000
+bundleId: 1273038
+url: https://dtkaplan.shinyapps.io/littleapp-proportions/
+when: 1521241304.63135
+asMultiple: FALSE
+asStatic: FALSE

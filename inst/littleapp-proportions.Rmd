@@ -29,7 +29,7 @@ RESPONSE <- selectInput("response", "Response variable",
                  choices = response_vars, selected = response_vars[1], width = "150px")
 EXPLAN <- selectInput("explan", "Explanatory variable",
                  choices = sort(c(categorical_vars,quantitative_vars)), 
-                 selected = "Age", width = "150px")
+                 selected = "Gender", width = "150px")
 SAMP_N <- selectInput("samp_n", "Sample size:", choices = c(5, 10, 20, 50, 100, 500, 1000),
                  selected = "50", width = "100px")
 DISCRETIZE <- selectInput("quantiles", "Break into quantiles", 
