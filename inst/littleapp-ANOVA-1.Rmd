@@ -42,6 +42,16 @@ annotate_factor  <- function(x, before = NULL, after = NULL) {
 
 
 ```{r context = "server", echo = FALSE}
+# whether to run in shiny-reactive or mock-reactive mode
+#reactive <- react_calc # comment this out for shiny mode
+#renderPlot <- renderText <- renderTable <- renderVerbatimText <- I
+# Leave the ! TRUE ==, that's a feature of all.equal()
+is_shiny <- ! TRUE == all.equal(reactive, StatPREPshiny::react_calc)
+if (! is_shiny) {
+  input <- list(samp_n = 100, response = "Age", explan = "PhysActive", seed = 1, show_sd = TRUE)
+  output <- list()
+}
+
 get_data_frame <- function() {NHANES}
 get_sample   <- reactive({
   set.seed(input$seed)
@@ -131,16 +141,17 @@ r_and_p_string <- reactive({
   tmp <- mod_stats()
   tmp$rsq <- signif(100*tmp$rsq, 3)
   
-  sprintf("R²  = %g%%\n1-R²=%g%%\n%s",
+  sprintf("R²  = %5.2f0%%\n1-R²= %5.2f0%%\n%s",
           tmp$rsq, 100-tmp$rsq, nice_p(tmp$pvalue))
 })
-output$plot1 <- renderPlot({graphics()})
-output$`r-and-p` <- renderText({r_and_p_string()})
-output$stats <- renderText({
+F_report <- reactive({
   tmp <- mod_stats()
   tmp$rsq <- signif(100*tmp$rsq, 3)
-  third <- sprintf("F = R²/df_mod ÷ (1-R²)/df_res\n  = (%g/%d) ÷ (%g/%d) = %g\n",
-            tmp$rsq, tmp$numdf, 100-tmp$rsq, tmp$dendf, signif(tmp$value,3))
+  third <- sprintf("F = R²/(1-R²) * df_resids/df_model\n  = (%g/%g) * (%d/%d)\n  = %g * %g = %g\n",
+            tmp$rsq, 100-tmp$rsq, tmp$dendf, 
+            tmp$numdf, signif(tmp$rsq/(100-tmp$rsq),3), 
+            signif(tmp$dendf/tmp$numdf, 3),
+            signif(tmp$value,3))
   
   label = paste0(
     sprintf("R²=%g%%     1-R²= %g%%\n", tmp$rsq, 100-tmp$rsq),
@@ -152,6 +163,9 @@ output$stats <- renderText({
   
   label
 })
+output$plot1 <- renderPlot({graphics()})
+output$`r-and-p` <- renderText({r_and_p_string()})
+output$stats <- renderText({F_report()})
 ```
   
 <table><tr><td class="control">`r SAMPN` `r A` `r B` `r SHOWSD` `r STATS` `r SEED` </td><td class="plot">`r DISPLAY`</td></tr></table>

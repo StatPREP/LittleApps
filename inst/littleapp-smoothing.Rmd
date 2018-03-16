@@ -59,6 +59,16 @@ DISPLAY <- tabsetPanel(tabPanel("Graphics", PLOT),
 
 # Leave the ! TRUE ==, that's a feature of all.equal()
 is_shiny <- ! TRUE == all.equal(reactive, StatPREPshiny::react_calc)
+if (! is_shiny) {
+  output <- list
+  renderPlot <- renderText <- renderTable <- I
+  input <- list(response = "Height",
+              explan_var = "Age",  covar = "Gender",
+              samp_n = "40", seed = "1",
+              interaction = TRUE, smoothing = "1", interval_type = "confidence",
+              show_mod_values = TRUE, show_resids = TRUE, show_horizontally = TRUE)
+  }
+
 
 model_formula <- reactive({
   base_str <- paste(input$response, "~ ns(", input$explan, ", ", input$smoothing, ")")
@@ -160,14 +170,6 @@ graphics <- reactive({
     
   P
 })
-if (! is_shiny) {
-  cat("Defining input\n")
-  input <- list(response = "Height",
-              explan_var = "Age",  covar = "Gender",
-              samp_n = "40", seed = "1",
-              interaction = TRUE, smoothing = "1", interval_type = "confidence",
-              show_mod_values = TRUE, show_resids = TRUE, show_horizontally = TRUE)
-  }
 
 ```
 

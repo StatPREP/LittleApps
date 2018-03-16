@@ -5,8 +5,8 @@ account: dtkaplan
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 299555
-bundleId: 1268938
+bundleId: 1270788
 url: https://dtkaplan.shinyapps.io/littleapp-ANOVA-1/
-when: 1521058960.01453
+when: 1521146812.86013
 asMultiple: FALSE
 asStatic: FALSE

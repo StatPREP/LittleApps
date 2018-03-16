@@ -1,0 +1,357 @@
+---
+title: "Proportions"
+runtime: shiny
+output: html_document
+---
+
+
+```{r include = FALSE}
+library(StatPREPshiny)
+library(mosaicModel)
+library(ggformula)
+library(dplyr)
+library(NHANES)
+library(splines)
+
+
+response_vars <- c("High BP", "Own Home", "Above Poverty Level", "Pregnant", "Depressed")
+
+categorical_vars <- c("Gender", "HomeOwn", "SmokeNow", "PregnantNow", "Depressed", "Work", "PhysActive" )
+quantitative_vars <- c("Age", "Poverty", "Pulse", "BMI", "TotChol", 
+                       "BPSys1", "UrineVol1", "Weight", "Height", "DaysMentHlthBad", 
+                       "LittleInterest", "Age1stBaby", "PhysActiveDays", "SexNumPartnLife")
+```
+
+
+
+```{r echo = FALSE}
+RESPONSE <- selectInput("response", "Response variable",
+                 choices = response_vars, selected = response_vars[1], width = "150px")
+EXPLAN <- selectInput("explan", "Explanatory variable",
+                 choices = sort(c(categorical_vars,quantitative_vars)), 
+                 selected = "Age", width = "150px")
+SAMP_N <- selectInput("samp_n", "Sample size:", choices = c(5, 10, 20, 50, 100, 500, 1000),
+                 selected = "50", width = "100px")
+DISCRETIZE <- selectInput("quantiles", "Break into quantiles", 
+                          choices = c(0, 2, 3, 4, 5, 7, 9),
+                          width = "150px")
+
+NEW_TRIAL <- actionButton("seed", "Take new sample")
+SHOW_CI <- checkboxInput("show_ci", "Show Conf. Intervals", FALSE)
+HOLD <- checkboxInput("hold_trials", "Retain trials", FALSE)
+MODE <- radioButtons("samp_mode", label = NULL, choices = c("sample", "resample"))
+LOGISTIC <- checkboxInput("logistic", "Use logistic regression", FALSE)
+SMOOTH <- selectInput("smooth", "Smoothing/Curviness", choices = 1:6, width = "150px")
+
+PLOT <- plotOutput("plot", width = "500px",
+                brush = brushOpts("horiz_line", direction = "x", fill = NA))
+TABLE <- verbatimTextOutput("cross-tab")
+DISPLAY <- tabsetPanel(tabPanel("Graphics", PLOT), 
+                       tabPanel("Tabulate", TABLE))
+```
+
+<!-- display the input controls and output spaces -->
+<table><tr>
+  <td class="control">`r RESPONSE` `r EXPLAN` `r SAMP_N` `r DISCRETIZE` <hr> Inference `r SHOW_CI`  `r HOLD` `r NEW_TRIAL` <hr> Modeling `r MODE` `r LOGISTIC` `r SMOOTH` </td>
+  <td class="plot">`r DISPLAY`</td>
+</tr></table>
+
+```{r echo = FALSE}
+get_model_vals <- function(data, logistic, form) { # Not reactive
+  fit_fun <- 
+    if (logistic) function(data, form) {glm(form, data = data, family = binomial)}
+    else function(data, form) {lm(form, data = data)}
+  mod <- fit_fun(data, form)
+  mod_eval(mod, nlevels = Inf, interval = "confidence")
+}
+```
+
+```{r context = "server", echo = FALSE}
+# whether to run in shiny-reactive or mock-reactive mode
+use_shiny <- TRUE
+
+# don't change this block
+if (! use_shiny) {
+  reactive <- react_calc # comment this out for shiny mode
+  reactiveVal <- reactive_value_holder
+  req <- isolate <- I
+
+  output <- list()
+  renderPlot <- renderText <- renderTable <- renderVerbatim <- I
+  input <- list(response = "High BP",
+                explan_var = "Age", show_ci = TRUE, hold_trials = TRUE, samp_mode = "sample",
+                samp_n = "100", seed = "1", smooth = 1, logistic = TRUE)
+}
+# below this are the reactive functions and state.
+
+# The state
+current_sample      <- NULL
+current_mod_vals    <- NULL
+trial_sample        <- NULL
+trial_mod_vals      <- NULL
+ntrials             <- 0L
+prev_trial_samps    <- NULL
+prev_trial_mod_vals <- NULL
+
+get_data_frame  <- reactive({
+  NHANES
+})
+get_full_data <- reactive({
+  req(input$response)
+
+    # create the binary response
+  if (input$response == "High BP") {
+    level_names <- c("high", "not high")
+    binary <- get_data_frame()[["BPSys1"]] > 130
+  } else if (input$response == "Above Poverty Level") {
+    level_names <- c("above", "below")
+    binary <- get_data_frame()[["Poverty"]] > 1
+  } else if (input$response == "Own Home") {
+    level_names = c("Own", "Don't")
+    binary <- get_data_frame()[["HomeOwn"]] == "Own"
+  } else if (input$response == "Pregnant") {
+    level_names <- c("pregnant", "not")
+    binary <- get_data_frame()[["Pregnant"]] == "Yes"
+    
+  } else if (input$response == "Depressed") {
+    level_names <- c("mid-high", "not")
+    binary <- get_data_frame()[["Depressed"]] != "None"
+  } else {
+    stop("Unknown response variable: fix this in code.")
+  }
+  
+  binary <- as.numeric(binary)
+  coded <- level_names[2 - binary]
+  res <- get_data_frame()[input$explan] 
+  names(res) <- "explan"
+  nquantiles <- as.numeric(input$quantiles)
+  if (nquantiles > 0) 
+    res$explan <- mosaic::ntiles(res$explan, n = nquantiles, format = "rank")
+    
+  
+  res[["coded"]] <- coded
+  res[["binary"]] <- binary
+  
+  res %>% na.omit()
+})
+samp_size <- reactive({
+  as.numeric(input$samp_n)
+})
+
+observe({
+  input$explan
+  input$response
+  input$samp_n
+  
+  if (ntrials > 0 && !input$hold_trials) clean_the_state()
+})
+
+
+get_base_sample <- reactive({
+  input$explan
+  input$response
+  input$seed
+  input$samp_n
+  input$quantiles
+  
+  
+  if (is.null(current_sample) | !(isolate(input$hold_trials))) {
+    set.seed(as.integer(Sys.time()))
+    res <- get_full_data() %>% sample_n(size = samp_size())
+    current_sample <<- res
+    current_mod_vals <<- get_model_vals(data = res, 
+                                        logistic = input$logistic, 
+                                        form = model_formula())
+  } else {
+    res <- current_sample
+  }
+  
+  res
+})
+
+observe({
+  input$hold_trials
+  clean_the_state()
+})
+
+clean_the_state <- reactive({
+  input$hold_trials 
+  
+  ntrials <<- 0L
+  # make the simulations empty
+  trial_sample        <<- NULL
+  trial_mod_vals      <<- NULL
+  prev_trial_samples  <<- NULL
+  prev_trial_mod_vals <<- NULL
+  FALSE
+})
+
+
+# input$hold is a flag saying whether to get a base sample or a simulated sample
+update_trials <- reactive({
+  # req(input$hold_trials)
+  input$smooth
+  input$logistic
+  input$seed
+  input$response
+  input$explan
+  input$samp_n
+  input$samp_mode
+  
+  if (! isolate(req(input$hold_trials))) {
+    clean_the_state()
+    return(FALSE)
+  } else {
+    ntrials <<- ntrials + 1L
+    if (input$samp_mode == "resample") {
+      res <- get_base_sample() %>% sample_n(size = samp_size(), replace = TRUE)
+    } else {
+      res <- get_a_sample()
+    }
+
+    res <- res %>% 
+      mutate(trial_number = ntrials, 
+             inf_color = ifelse(input$samp_mode == "sample", "blue", "red"))
+    
+    trial_sample <<- res # store new value
+    new_mod_vals <- 
+      get_model_vals(data = res, logistic = input$logistic, form = model_formula()) %>%
+      mutate(trial_number = ntrials, 
+             inf_color    = ifelse(input$samp_mode == "sample", "blue", "red"))
+    trial_mod_vals <<- new_mod_vals
+    prev_trial_samps <<- bind_rows(prev_trial_samps, trial_sample)
+    prev_trial_mod_vals <<- bind_rows(prev_trial_mod_vals, trial_mod_vals)
+  
+    return(TRUE)
+  }
+})
+
+
+get_seed <- reactive({
+  input$seed
+  return(as.integer(Sys.time()))
+})
+
+get_a_sample <- reactive({
+  input$seed
+  input$response
+  input$explan
+  input$samp_n
+  
+  set.seed(get_seed())
+  
+  get_full_data() %>% sample_n(size = samp_size())
+})
+
+plot_formula <- reactive({
+  binary ~ explan
+})
+model_formula <- reactive({
+  if (quantitative_explan_var()) {
+    as.formula(paste("binary ~ ns(explan,", input$smooth, ")"))
+  } else {
+    binary ~ explan
+  } 
+})
+
+quantitative_explan_var <- reactive({
+  input$explan
+  input$quantiles
+  if (input$quantiles != 0) return(FALSE)
+  
+  is.numeric(get_full_data()[["explan"]])
+})
+
+outcome_labels <- reactive({
+  unique(get_full_data()[c("coded", "binary")]) %>% arrange(binary)
+})
+
+graphics <- reactive({
+  jitter_width <- ifelse(quantitative_explan_var(), 0, 0.1)
+  level_labs <- outcome_labels()$coded
+  second_axis = dup_axis(name = "Numeric", 
+                         breaks = seq(0, 1, by = 0.2), 
+                         labels = c(0, "0.2", "0.4", "0.6", "0.8", 1))
+  P <- gf_jitter(plot_formula(), data = get_base_sample(), height = 0.05, 
+                 width = jitter_width, alpha = 0.5) %>%
+       gf_labs(y = input$response, x = input$explan ) 
+
+  if (quantitative_explan_var()) {
+    P <- P %>% gf_line(model_output ~ explan, 
+            data = current_mod_vals, size = 2, color = "blue", alpha = 0.5)
+    if (input$show_ci)
+      P <- P %>% gf_errorbar(lower + upper ~ explan,
+                             data = current_mod_vals, color = "blue", alpha = 0.1)
+    if (ntrials > 0) {
+      P <- P %>% gf_jitter(plot_formula(), data = trial_sample, height = 0.05, 
+                 width = jitter_width, alpha = 0.5, color = "green") 
+      P <- P %>% gf_line(model_output ~ explan,
+                          data = prev_trial_mod_vals, color = ~ inf_color, group = ~ trial_number  )
+    }
+  } else {
+    # Draw error bars
+    P <- P %>% gf_errorbar(model_output + model_output ~ explan,
+                      data = current_mod_vals, size = 2, color = "blue", width = 0.5, alpha = 0.5)
+    if (input$show_ci)
+      P <- P %>% gf_errorbar(lower + upper ~ explan, 
+                             data = current_mod_vals, size = 1, width = 0.2,
+                             color = "blue", alpha = 0.5)
+    if (ntrials > 0) {
+      P <- P %>% gf_errorbar(model_output + model_output ~ explan,
+                          data = prev_trial_mod_vals, 
+                          width = 0.2, color = ~ inf_color, group = ~ trial_number  )
+    }
+  } 
+    
+  P %>%  
+    gf_refine(scale_y_continuous(
+      name = input$response, breaks = seq(0, 1, by = 0.2), 
+      labels = c(level_labs[1], "", "", "", "", level_labs[2]), sec.axis = second_axis),
+      scale_color_manual(values = c(red = "red", blue = "blue"))) %>% 
+    gf_theme(legend.position = "none")
+})
+```
+
+```{r eval = ! use_shiny, echo = FALSE}
+input$seed <- sample(1:10000, 1)
+input$hold_trials <- TRUE
+input$samp_mode <- "sample"
+for (k in 1:5) update_trials()
+input$samp_mode <- "resample"
+for (k in 1:5) update_trials()
+graphics()
+```
+
+
+```{r context = "server", eval = use_shiny,  echo = FALSE}
+observe({
+  update_trials() # initialize the data
+})
+output$plot <- renderPlot({input$seed; graphics()}) 
+```
+
+<style type="text/css">
+td.control {
+  border:5px solid gray;
+  border-radius:10px;
+  padding: 5px;
+  vertical-align: top;
+}
+td.plot {
+  border:5px solid gray;
+  padding: 5px;
+  border-radius:10px;
+  color: white;
+}
+
+</style>
+
+
+
+
+```{r context = "server", echo = FALSE}
+the_width <- reactive({0.1})
+point_alpha <- function(n) {
+  pmin(1, 1.2 / 2^log10(n)) # a trick?
+}
+

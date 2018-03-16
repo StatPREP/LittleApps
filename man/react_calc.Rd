@@ -4,13 +4,15 @@
 \alias{react_calc}
 \title{Create reactive-style functions that can be run outside of shiny}
 \usage{
-react_calc(stmts, shiny = FALSE, env = parent.frame())
+react_calc(stmts, env = parent.frame())
 }
 \arguments{
 \item{stmts}{bracketed code of the same sort used in \code{shiny::reactive()}}
 
-\item{shiny}{flag indicated whether a shiny-reactive function or a mock-reactive
-function should be produced.}
+\item{env}{variable to set the environment in which the statements will be executed.
+It would be rare to use the \code{env} variable: the default does what's needed}
+
+\item{...}{a single object (of whatever kind) to be stored in a mock-reactive variable}
 }
 \description{
 Rseplacement for \code{shiny::reactive()}  that makes it
@@ -26,5 +28,8 @@ find_rsquared <- react_calc({summary(make_model())$r.squared})
 
 find_rsquared()  # the ultimate calculation
 
-
+v <- reactive_value_holder(7)
+v() # get value
+v(88) # set value (and return that value)
+v() # get value
 }
