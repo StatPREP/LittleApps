@@ -5,8 +5,8 @@ account: dtkaplan
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 298803
-bundleId: 1266895
+bundleId: 1274767
 url: https://dtkaplan.shinyapps.io/littleapp-stem-and-leaf/
-when: 1520970038.24169
+when: 1521384448.7327
 asMultiple: FALSE
 asStatic: FALSE

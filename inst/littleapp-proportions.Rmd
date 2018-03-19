@@ -86,7 +86,7 @@ if (! use_shiny) {
 
 # The state
 current_sample      <- NULL
-current_mod_vals    <- NULL
+# current_mod_vals    <- NULL
 trial_sample        <- NULL
 trial_mod_vals      <- NULL
 ntrials             <- 0L
@@ -125,7 +125,7 @@ get_full_data <- reactive({
   res <- get_data_frame()[input$explan] 
   names(res) <- "explan"
   nquantiles <- as.numeric(input$quantiles)
-  if (nquantiles > 0) 
+  if (nquantiles > 0 && is.numeric(res$explan)) 
     res$explan <- mosaic::ntiles(res$explan, n = nquantiles, format = "rank")
     
   
@@ -154,19 +154,27 @@ get_base_sample <- reactive({
   input$samp_n
   input$quantiles
   
-  
   if (is.null(current_sample) | !(isolate(input$hold_trials))) {
     set.seed(as.integer(Sys.time()))
     res <- get_full_data() %>% sample_n(size = samp_size())
     current_sample <<- res
-    current_mod_vals <<- get_model_vals(data = res, 
-                                        logistic = input$logistic, 
-                                        form = model_formula())
+    # current_mod_vals <<- get_model_vals(data = res,
+    #                                     logistic = isolate(input$logistic),
+    #                                     form = model_formula())
   } else {
     res <- current_sample
   }
   
   res
+})
+
+current_mod_vals <- reactive({
+  input$explan
+  input$response
+  input$samp_n
+  get_model_vals(data = get_base_sample(),
+                 logistic = input$logistic,
+                 form = model_formula())
 })
 
 observe({
@@ -211,13 +219,17 @@ update_trials <- reactive({
 
     res <- res %>% 
       mutate(trial_number = ntrials, 
-             inf_color = ifelse(input$samp_mode == "sample", "blue", "red"))
+             inf_color = ifelse(input$samp_mode == "sample", 
+                                LA_color("sample_trial"), 
+                                LA_color("resample_trial")))
     
     trial_sample <<- res # store new value
     new_mod_vals <- 
       get_model_vals(data = res, logistic = input$logistic, form = model_formula()) %>%
       mutate(trial_number = ntrials, 
-             inf_color    = ifelse(input$samp_mode == "sample", "blue", "red"))
+             inf_color    = ifelse(input$samp_mode == "sample", 
+                                   LA_color("sample_trial"), 
+                                   LA_color("resample_trial")))
     trial_mod_vals <<- new_mod_vals
     prev_trial_samps <<- bind_rows(prev_trial_samps, trial_sample)
     prev_trial_mod_vals <<- bind_rows(prev_trial_mod_vals, trial_mod_vals)
@@ -273,29 +285,33 @@ graphics <- reactive({
                          breaks = seq(0, 1, by = 0.2), 
                          labels = c(0, "0.2", "0.4", "0.6", "0.8", 1))
   P <- gf_jitter(plot_formula(), data = get_base_sample(), height = 0.05, 
-                 width = jitter_width, alpha = 0.5) %>%
+                 width = jitter_width, alpha = 0.5, color = LA_color("sample", "no covar")) %>%
        gf_labs(y = input$response, x = input$explan ) 
 
   if (quantitative_explan_var()) {
     P <- P %>% gf_line(model_output ~ explan, 
-            data = current_mod_vals, size = 2, color = "blue", alpha = 0.5)
+            data = current_mod_vals(), size = 2, color = LA_color("model_fun"), alpha = 0.5)
     if (input$show_ci)
       P <- P %>% gf_errorbar(lower + upper ~ explan,
-                             data = current_mod_vals, color = "blue", alpha = 0.1)
+                             data = current_mod_vals(), color = LA_color("conf_int"), alpha = 0.1)
     if (ntrials > 0) {
       P <- P %>% gf_jitter(plot_formula(), data = trial_sample, height = 0.05, 
-                 width = jitter_width, alpha = 0.5, color = "green") 
+                 width = jitter_width, alpha = 0.5, 
+                 color = ifelse(input$samp_mode == "sample", 
+                                LA_color("sample_sim"),
+                                LA_color("resample_trial"))) 
       P <- P %>% gf_line(model_output ~ explan,
                           data = prev_trial_mod_vals, color = ~ inf_color, group = ~ trial_number  )
     }
   } else {
     # Draw error bars
     P <- P %>% gf_errorbar(model_output + model_output ~ explan,
-                      data = current_mod_vals, size = 2, color = "blue", width = 0.5, alpha = 0.5)
+                      data = current_mod_vals(), size = 2, 
+                      color = LA_color("model_fun"), width = 0.5, alpha = 0.5)
     if (input$show_ci)
       P <- P %>% gf_errorbar(lower + upper ~ explan, 
-                             data = current_mod_vals, size = 1, width = 0.2,
-                             color = "blue", alpha = 0.5)
+                             data = current_mod_vals(), size = 1, width = 0.2,
+                             color = LA_color("conf_int"), alpha = 0.5)
     if (ntrials > 0) {
       P <- P %>% gf_errorbar(model_output + model_output ~ explan,
                           data = prev_trial_mod_vals, 
@@ -303,11 +319,12 @@ graphics <- reactive({
     }
   } 
     
-  P %>%  
+  P %>% 
     gf_refine(scale_y_continuous(
-      name = input$response, breaks = seq(0, 1, by = 0.2), 
+      name = input$response, breaks = seq(0, 1, by = 0.2),
+      limits = c(-0.1, 1.1), 
       labels = c(level_labs[1], "", "", "", "", level_labs[2]), sec.axis = second_axis),
-      scale_color_manual(values = c(red = "red", blue = "blue"))) %>% 
+      verbatim_colors()) %>% 
     gf_theme(legend.position = "none")
 })
 ```
@@ -345,13 +362,3 @@ td.plot {
 }
 
 </style>
-
-
-
-
-```{r context = "server", echo = FALSE}
-the_width <- reactive({0.1})
-point_alpha <- function(n) {
-  pmin(1, 1.2 / 2^log10(n)) # a trick?
-}
-

@@ -58,7 +58,7 @@ stem_info <- reactive({
 ```{r echo = FALSE}
 RAW <- htmlOutput("raw")
 A <- selectInput("response", "Response variable",
-                 choices = c("Weight", "Height"), width = "100px")
+                 choices = c("Weight", "Height", "SmokeAge", "Pulse", "DaysMentHlthBad"), width = "100px")
 samp_n_choices <- c(2, 5, 10, 20, 50, 100, 200)
 NS <- selectInput("samp_n", "Sample size:", 
                   choices = samp_n_choices,
