@@ -35,7 +35,7 @@ N <- selectInput("samp_n", "Sample size:", choices = c(5, 10, 20, 50, 100, 500, 
 C <- checkboxGroupInput("layers", "Inferential statistics",
                         c("T", "Conf. interval"), width = "150px", inline = TRUE)
 NINETY <- checkboxInput("show_90_level", "CI at 90%", FALSE)
-SEED <- actionButton("seed", "Another sample")
+SEED <- actionButton("seed", "New sample")
 EV <- checkboxInput("equal_var", "Assume equal variance", FALSE)
 CENTER <- radioButtons("center_on", "T location:", choices = c("Left", "Right"), inline = TRUE)
 PV <- htmlOutput("pvalue")
