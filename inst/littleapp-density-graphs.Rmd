@@ -7,18 +7,20 @@ output: html_document
 ```{r include=FALSE}
 library(NHANES)
 library(ggformula)
+library(StatPREPshiny)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r echo = FALSE}
-A <- selectInput("response", "Response variable",
+RESPONSE <- selectInput("response", "Response variable",
                  choices = c("Weight", "Height", "Poverty", "Pulse", 
                              "BMI", "TotChol", "BPSys1", "UrineVol1", 
                              "Testosterone", "Age"), 
                  width = "100px")
-Facet <- selectInput("facet", "Explanatory var.", choices = c("None", "Gender", "HomeOwn", "SmokeNow", "SexEver", "PregnantNow", "Depressed", "Work", "PhysActive", "AgeDecade" ), width = "100px")
+EXPLAN <- selectInput("explan", "Explanatory var.", choices = c("None", "Gender", "HomeOwn", "SmokeNow", "SexEver", "PregnantNow", "Depressed", "Work", "PhysActive", "AgeDecade" ), width = "100px")
 C <- checkboxGroupInput("layers", "Graphics layers:",
-                        c("density", "histogram"), width = "100px")
+                        c("density", "histogram", "violin"), width = "100px")
+F <- radioButtons("graph_format", "Graph format", choices = c("density vs response", "response vs explanatory"))
 S <- sliderInput("bw", "Smoothing:", min = 1, max = 20, value = 3, width = "150px")
 P <- plotOutput("plot1", width = "500px",
                 brush = brushOpts("eliminate", direction = "x", fill = NA))
@@ -30,21 +32,22 @@ P <- plotOutput("plot1", width = "500px",
 ```{r echo = FALSE, context = "server"}
 the_formula <- reactive({
   basic <- paste("yval ~", input$response)
-  if (input$facet != "None" ) basic <- paste(basic, "|", input$facet)
+  if (input$explan != "None" ) basic <- paste(basic, "|", input$explan)
   as.formula(basic)
   })
 the_formula2 <- reactive({
   basic <- paste("~", input$response)
-  if (input$facet != "None" ) basic <- paste(basic, "|", input$facet)
+  if (input$explan != "None" ) basic <- paste(basic, "|", input$explan)
   as.formula(basic)
 })
 
 the_data <- reactive({
   res <- NHANES
-  res$yval = 1.1 * max_y_value() 
+  res$yval <- 1.1 * max_y_value() 
+  res$None <- "All together"
   res$keepers <- TRUE
 
-  res
+  res[c(input$response, input$explan, "yval", "keepers")] %>% na.omit()
 })
 
 observe({
@@ -71,11 +74,23 @@ max_x_value <- reactive(max(NHANES[[input$response]], na.rm = TRUE))
 
 bw <- reactive(as.numeric(input$bw))
 
+violin_graphics <- reactive({
+  set.seed(101)
+  all_data <- the_data()
+  keepers <- all_data[all_data$keepers,]
+  this_formula <- as.formula(paste(input$response, "~", input$explan))
+  A <- gf_jitter(this_formula, data = keepers, alpha = 0.05,
+                 width = 0.1, height = 0, size = bw()/10) %>%
+    gf_violin(this_formula, data = keepers, bw = bw(), fill = "green", alpha = 0.2, color = NA)
+
+  A
+})
+
 graphics <- reactive({
     set.seed(101) # so the dots don't move around
     all_data <- the_data()
     keepers <- all_data[all_data$keepers,]
-    A <- gf_jitter(the_formula(), data = keepers, alpha = 0.1, 
+    A <- gf_jitter(the_formula(), data = keepers, alpha = 0.05, 
                    height = 0.1 * max_y_value(),
                    size = bw() / 10)
     if ("density" %in% input$layers)
@@ -83,9 +98,28 @@ graphics <- reactive({
                             color = "blue", fill = "blue",
                             bw = bw())
     if ("histogram" %in% input$layers)
-      A <- A %>% gf_dhistogram(the_formula2(), data = keepers, 
+      A <- A %>% gf_dhistogram(the_formula2(), 
+                               data = keepers, 
                                alpha = 0.7, color = "black", fill = NA,
                                binwidth = bw() / 0.5)
+    if ("violin" %in% input$layers) {
+      if (input$explan == "None") {
+      ribbon_coords <- ribbon_for_violin(keepers[[input$response]], 
+                                         vpos = 1.1 * max_y_value(), 
+                                         vwidth = 0.2 * max_y_value(),
+                                         bw = bw())
+      } else {
+        ribbon_coords <- ribbon_for_violin(keepers[[input$response]], 
+                                         keepers[[input$explan]],
+                                         vpos = 1.1 * max_y_value(),
+                                         vwidth = 0.2 * max_y_value(),
+                                         bw = bw())
+        ribbon_coords[[input$explan]] <- ribbon_coords$group
+      }
+      # For unknown reason, gf_ribbon() doesn't work. So mimic it.
+      A <- A %>% gf_segment(top + bottom ~ x + x, data = ribbon_coords, 
+                             alpha = 0.2, color = "green")
+    }
     return(A %>% 
              gf_lims(y = c(0, 1.2*max_y_value()*
                                ifelse(length(input$layers)==0, 1, NA)), 
@@ -93,11 +127,12 @@ graphics <- reactive({
              gf_labs(y = ifelse(length(input$layers)==0, "", "Density")))
   })
 
-
-output$plot1 <- renderPlot({graphics()})
+output$plot1 <- renderPlot({
+  if (input$graph_format == "density vs response") graphics()
+  else violin_graphics()})
 ```
 
-<table><tr><td class="control">`r A` `r Facet` `r C` `r S`</td><td class="plot">`r P`</td></tr></table>
+<table><tr><td class="control">`r RESPONSE` `r EXPLAN` `r C` `r S` `r F`</td><td class="plot">`r P`</td></tr></table>
 
 
 
