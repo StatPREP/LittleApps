@@ -1,5 +1,5 @@
 ---
-title: "Displaying densities"
+title: "Displaying distributions"
 runtime: shiny
 output: html_document
 ---
@@ -8,6 +8,7 @@ output: html_document
 library(NHANES)
 library(ggformula)
 library(StatPREPshiny)
+library(dplyr)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -18,9 +19,13 @@ RESPONSE <- selectInput("response", "Response variable",
                              "Testosterone", "Age"), 
                  width = "100px")
 EXPLAN <- selectInput("explan", "Explanatory var.", choices = c("None", "Gender", "HomeOwn", "SmokeNow", "SexEver", "PregnantNow", "Depressed", "Work", "PhysActive", "AgeDecade" ), width = "100px")
+SAMP_N <- selectInput("samp_n", "Sample size",
+                      choices = c(10, 20, 50, 100, 500, 1000, 5000),
+                      selected = "5000",
+                      width = "100px")
 C <- checkboxGroupInput("layers", "Graphics layers:",
                         c("density", "histogram", "violin"), width = "100px")
-F <- radioButtons("graph_format", "Graph format", choices = c("density vs response", "response vs explanatory"))
+F <- radioButtons("graph_format", "Graph format", choices = c("density vs response", "response vs explanatory"), width = "130px")
 S <- sliderInput("bw", "Smoothing:", min = 1, max = 20, value = 3, width = "150px")
 P <- plotOutput("plot1", width = "500px",
                 brush = brushOpts("eliminate", direction = "x", fill = NA))
@@ -41,13 +46,24 @@ the_formula2 <- reactive({
   as.formula(basic)
 })
 
+density_height <- reactive({
+  req(input$response)
+  dat <- the_data()[[input$response]]
+  dens <- density(dat, bw = bw())
+  
+  quantile(dens$y, probs = 0.95)
+})
+
 the_data <- reactive({
+  req(input$samp_n)
   res <- NHANES
-  res$yval <- 1.1 * max_y_value() 
+  res$yval <- 1.1 # will change 
   res$None <- "All together"
   res$keepers <- TRUE
 
-  res[c(input$response, input$explan, "yval", "keepers")] %>% na.omit()
+  res[c(input$response, input$explan, "yval", "keepers")] %>% 
+    na.omit() %>%
+    sample_n(size = as.numeric(input$samp_n))
 })
 
 observe({
@@ -58,18 +74,19 @@ observe({
   updateSliderInput(session, "bw", max = M/5, min = M/250, value = M/20, step = M/250)
 })
 
-max_y_value <- reactive(switch(input$response, 
-                             "Weight" = 0.018,
-                             "Height" = 0.031,
-                             "Testosterone" = 0.01,
-                             "TotChol" = 0.12,
-                             "Pulse"   = 0.35,
-                             "BPSys1"  = 0.03,
-                             "UrineVol1" = 0.01,
-                             "BMI"     = 0.055,
-                             "Age"     = 0.015,
-                             "Poverty" = 0.5))
-                      
+# max_y_value <- reactive(switch(input$response, 
+#                              "Weight" = 0.018,
+#                              "Height" = 0.031,
+#                              "Testosterone" = 0.01,
+#                              "TotChol" = 0.12,
+#                              "Pulse"   = 0.35,
+#                              "BPSys1"  = 0.03,
+#                              "UrineVol1" = 0.01,
+#                              "BMI"     = 0.055,
+#                              "Age"     = 0.015,
+#                              "Poverty" = 0.5))
+#                       
+
 max_x_value <- reactive(max(NHANES[[input$response]], na.rm = TRUE))
 
 bw <- reactive(as.numeric(input$bw))
@@ -79,8 +96,12 @@ violin_graphics <- reactive({
   all_data <- the_data()
   keepers <- all_data[all_data$keepers,]
   this_formula <- as.formula(paste(input$response, "~", input$explan))
-  A <- gf_jitter(this_formula, data = keepers, alpha = 0.05,
-                 width = 0.1, height = 0, size = bw()/10) %>%
+  A <- gf_jitter(this_formula, data = keepers, 
+                 alpha = point_alpha(as.numeric(input$samp_n)),
+                 width = 0.1, height = 0, 
+                 size = ifelse(as.numeric(input$samp_n) <= 100,
+                               1,
+                               bw()/10)) %>%
     gf_violin(this_formula, data = keepers, bw = bw(), fill = "green", alpha = 0.2, color = NA)
 
   A
@@ -90,9 +111,11 @@ graphics <- reactive({
     set.seed(101) # so the dots don't move around
     all_data <- the_data()
     keepers <- all_data[all_data$keepers,]
-    A <- gf_jitter(the_formula(), data = keepers, alpha = 0.05, 
-                   height = 0.1 * max_y_value(),
-                   size = bw() / 10)
+    keepers$yval <- 1.1 * density_height()
+    A <- gf_jitter(the_formula(), data = keepers, 
+                   alpha = point_alpha(as.numeric(input$samp_n)), 
+                   height = 0.1 * density_height(),
+                   size = ifelse(as.numeric(input$samp_n) <= 100, 1, bw() / 10))
     if ("density" %in% input$layers)
       A <- A %>% gf_density(the_formula2(), data = keepers, alpha = 0.5, 
                             color = "blue", fill = "blue",
@@ -104,16 +127,18 @@ graphics <- reactive({
                                binwidth = bw() / 0.5)
     if ("violin" %in% input$layers) {
       if (input$explan == "None") {
-      ribbon_coords <- ribbon_for_violin(keepers[[input$response]], 
-                                         vpos = 1.1 * max_y_value(), 
-                                         vwidth = 0.2 * max_y_value(),
-                                         bw = bw())
+      ribbon_coords <- 
+        ribbon_for_violin(keepers[[input$response]], 
+                          vpos = 1.1 * density_height(), 
+                          vwidth = 0.2 * density_height(),
+                          bw = bw())
       } else {
-        ribbon_coords <- ribbon_for_violin(keepers[[input$response]], 
-                                         keepers[[input$explan]],
-                                         vpos = 1.1 * max_y_value(),
-                                         vwidth = 0.2 * max_y_value(),
-                                         bw = bw())
+        ribbon_coords <- 
+          ribbon_for_violin(keepers[[input$response]], 
+                            keepers[[input$explan]],
+                            vpos = 1.1 * density_height(),
+                            vwidth = 0.2 * density_height(),
+                            bw = bw())
         ribbon_coords[[input$explan]] <- ribbon_coords$group
       }
       # For unknown reason, gf_ribbon() doesn't work. So mimic it.
@@ -121,7 +146,7 @@ graphics <- reactive({
                              alpha = 0.2, color = "green")
     }
     return(A %>% 
-             gf_lims(y = c(0, 1.2*max_y_value()*
+             gf_lims(y = c(0, 1.2*density_height()*
                                ifelse(length(input$layers)==0, 1, NA)), 
                      x = c(-.1,1) * max_x_value()) %>% 
              gf_labs(y = ifelse(length(input$layers)==0, "", "Density")))
@@ -132,7 +157,7 @@ output$plot1 <- renderPlot({
   else violin_graphics()})
 ```
 
-<table><tr><td class="control">`r RESPONSE` `r EXPLAN` `r C` `r S` `r F`</td><td class="plot">`r P`</td></tr></table>
+<table><tr><td class="control">`r RESPONSE` `r EXPLAN` `r SAMP_N` `r C` `r S` `r F`</td><td class="plot">`r P`</td></tr></table>
 
 
 

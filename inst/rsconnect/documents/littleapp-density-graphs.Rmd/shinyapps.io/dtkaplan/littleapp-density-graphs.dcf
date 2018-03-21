@@ -5,8 +5,8 @@ account: dtkaplan
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 298744
-bundleId: 1266869
+bundleId: 1279364
 url: https://dtkaplan.shinyapps.io/littleapp-density-graphs/
-when: 1520969380.12379
+when: 1521583916.48973
 asMultiple: FALSE
 asStatic: FALSE

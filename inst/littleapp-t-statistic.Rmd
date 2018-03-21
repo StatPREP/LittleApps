@@ -41,6 +41,10 @@ CENTER <- radioButtons("center_on", "T location:", choices = c("Left", "Right"),
 PV <- htmlOutput("pvalue")
 P <- plotOutput("plot1", width = "500px",
                 brush = brushOpts("horiz_line", direction = "x", fill = NA))
+EXPLAIN <- imageOutput("explain_image") #Use the click attribute to handle the annotations.
+
+DISPLAY <- tabsetPanel(tabPanel("Main graphic", P), 
+                       tabPanel("Explain what's what", EXPLAIN))
 keepers <- list(
   PregnantNow = c("Yes", "No"),
   SmokeNow = c("Yes", "No"),
@@ -56,7 +60,7 @@ keepers <- list(
 
 ```
 
-<table><tr><td class="control">`r A` `r B` `r N` `r C` `r PV` `r SEED` `r EV` `r CENTER` `r NINETY`  </td><td class="plot">`r P`</td></tr></table>
+<table><tr><td class="control">`r A` `r B` `r N` `r C` `r PV` `r SEED` `r EV` `r CENTER` `r NINETY`  </td><td class="plot">`r DISPLAY`</td></tr></table>
 
 
 
@@ -170,5 +174,11 @@ graphics <- reactive( {
 })
 
 output$plot1 <- renderPlot(graphics())
+output$explain_image <- renderImage({
+
+  list(src = "images/explain-t-statistic.jpg")
+  },
+  deleteFile = FALSE # important!
+)
 ```
 
