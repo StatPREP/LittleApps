@@ -29,14 +29,15 @@ SAMP_N <- selectInput("samp_n", "Sample n",
                  choices = samp_sizes, selected = "200",
                  width = "100px")
 SEED <- actionButton("seed", "New sample")
-COVER_LEVEL <- selectInput("cover_level", "Coverage level",
+COVER_LEVEL <- selectInput("cover_level", "... at coverage level",
                            choices = c("99%" = 0.99, "95%" = 0.95, 
                                        "80%" = 0.80, "67%" = 0.67, "50%" = 0.50),
                            selected = 0.95, width = "100px")
-SHOW_COVER <- checkboxInput("show_cover", "Show coverage interval.", FALSE, 
+SHOW_COVER <- checkboxInput("show_cover", "Show coverage interval", FALSE, 
                             width = "150px")
-SHOW_SD <- checkboxInput("show_sd", "Show standard deviation", FALSE, width = "150px")
-SHOW_CI <- checkboxInput("show_ci", "Show confidence interval", FALSE, width = "150px")
+SHOW_MEAN <- checkboxInput("show_mean", "mean", FALSE, width = "150px")
+SHOW_SD <- checkboxInput("show_sd", "standard deviation", FALSE, width = "150px")
+SHOW_CI <- checkboxInput("show_ci", "Show 95% confidence intervals", FALSE, width = "150px")
 SHOW_VIOLIN <- checkboxInput("show_violin", "Show density", FALSE, width = "150px")
 PLOT <- plotOutput("plot1", width = "500px")
 DISPLAY <- tabsetPanel(
@@ -66,10 +67,12 @@ the_data <- function() {
 
 observe({
   updateCheckboxInput(session, "show_cover", 
-          label = paste("Show", 
+          label = paste0("median and ", 
                         round(100*as.numeric(req(input$cover_level))),
-                        "% coverage interval"))
+                        "% coverage interval."))
 })
+
+
 
 for_quantiles <- reactive({
   alpha <- (1 - as.numeric(input$cover_level))/2
@@ -93,8 +96,13 @@ stats <- reactive({
            Q1 = bottom,
            Q2 = top,
            median = median,
+           ci_med = ci.median,
+           ci_sd = ci.sd,
            long_names = FALSE) %>%
-  mutate(stderr = (ci_upper - stat)/2)
+  mutate(stderr = (ci_upper - stat)/2,
+         sd_upper = stat + ci_sd_upper,
+         sd_lower = stat + ci_sd_lower
+         )
 })
 
 graphics <- reactive({
@@ -102,9 +110,19 @@ graphics <- reactive({
   P <- gf_jitter(space_formula(), data = the_data(),
                  alpha = point_alpha(samp_size()),
                  color = color_formula(), width = 0.1, height = 0) 
-  P <- P %>% gf_errorbar(as.formula(paste("stat + stat ~", explan())), 
-                         data = stats(), color = color_formula(), 
-                         width = 0.3, size = 2 ) 
+  if (input$show_mean) {
+    P <- P %>% 
+      gf_errorbar(as.formula(paste("stat + stat ~", explan())), 
+                  data = stats(), color = color_formula(), 
+                  width = 0.3, size = 2 ) 
+    if (input$show_ci) {
+      P <- P %>% 
+        gf_errorbar(as.formula(
+          paste("ci_lower + ci_upper ~ ", input$explan)),
+                    data = stats(), color = color_formula(), 
+          size = 1.5, width = 0.1)
+    }
+  }
   
   if (input$show_violin) {
     P <- P %>%
@@ -115,19 +133,25 @@ graphics <- reactive({
   if (input$show_cover) {
     P <- P %>%
       gf_segment(as.formula(paste("Q1 + Q2 ~ ", input$explan, "+", input$explan)),
-                 data = stats(), color = "black", size = 50, alpha = 0.2) %>%
+                 data = stats(), color = "blue", size = 50, alpha = 0.2) %>%
       gf_errorbar(as.formula(paste("median + median ~ ", input$explan)),
-                  data = stats(), color = "black", width = 0.3)
+                  data = stats(), color = "blue", width = 0.15)
+    if (input$show_ci)
+      P <- P %>% 
+        gf_errorbar(as.formula(
+          paste("ci_med_lower + ci_med_upper ~", input$explan)),
+          data = stats(),
+          color = "blue", width = 0.2)
   }
   
   if (input$show_sd) { 
-    P <- P %>% v_ruler(ruler_formula(), data = stats())
-  }
-  
-  if (input$show_ci) {
-    P <- P %>% 
-    gf_errorbar(as.formula(paste("ci_lower + ci_upper ~ ", input$explan)),
-                data = stats(), color = color_formula(), size = 1.5, width = 0.1)
+    P <- P %>% v_ruler(ruler_formula(), data = stats()) 
+    if (input$show_ci) {
+      P <- P %>% gf_errorbar(as.formula(
+        paste("sd_lower + sd_upper ~", input$explan)),
+        data = stats(),
+        color = "black", width = 0.1, size = 2)
+    }
   }
   
   P %>% 
@@ -141,7 +165,7 @@ output$plot1 <- renderPlot({
 ```
 
 
-<table><tr><td class="control">`r RESPONSE` `r EXPLAN` `r SAMP_N` <hr> `r SHOW_COVER` `r COVER_LEVEL` `r SHOW_SD` `r SHOW_CI` `r SHOW_VIOLIN` `r SEED`  </td><td class="plot">`r DISPLAY`</td></tr></table>
+<table><tr><td class="control">`r RESPONSE` `r EXPLAN``r SAMP_N` <hr> Statistical annotations  `r SHOW_MEAN` `r SHOW_SD` `r SHOW_COVER` `r COVER_LEVEL` <hr>  `r SHOW_CI`  <hr> `r SHOW_VIOLIN` `r SEED`  </td><td class="plot">`r DISPLAY`</td></tr></table>
 
 
 

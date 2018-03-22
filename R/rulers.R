@@ -50,7 +50,7 @@ v_ruler <- function(object = NULL, gformula = NULL, data = NULL, nticks = 3,
     rep_data[[length_var_name]] * tick_number
   bottom_tick_pos <- rep_data[[center_var_name]] +
     rep_data[[length_var_name]] * (tick_number - 1)
-  tick_name <- as.character(tick_number)
+  tick_name <- paste0(as.character(tick_number), "sd")
 
   rep_data[[".top."]] <- top_tick_pos
   rep_data[[".bottom."]] <- bottom_tick_pos
