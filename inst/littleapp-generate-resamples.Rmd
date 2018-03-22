@@ -13,6 +13,10 @@ knitr::opts_chunk$set(echo = TRUE)
 no_x_axis <- theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank())
+# size_scale_vals <- 1:10
+# names(size_scale_vals) <- paste(1:10)
+size_scale_vals <- c("1" = 1, "2" = 2, "3" = 3.9, "4" = 4.5, "5" = 5)
+size_scale <- scale_size_manual(values = size_scale_vals)
 ```
 
 
@@ -21,7 +25,7 @@ samp_sizes <- c(5, 10, 20, 50, 100, 500)
 get_samp <- function(n) {
   mosaicData::Galton %>% select(height, mother, sex) %>% 
     sample_n(size = n) %>% 
-    mutate(x=1)
+    mutate(x=runif(n, min = -0.5, max = 0.5))
 }
 new_set <- function(possibilities) {
   res <- lapply(possibilities, function(x) list())
@@ -69,10 +73,11 @@ new_trial <- function(state) {
 N <- selectInput("samp_n", "Sample n", 
                  choices = samp_sizes, selected = "20",
                  width = "100px")
-A <- actionButton("new_trial", "New Trial")
+A <- actionButton("new_trial", "New resampling trial", width = "150px")
 B <- actionButton("clear", "Clear trials")
-C <- checkboxInput("fit", "Show fit", TRUE, width = "150px")
+C <- checkboxInput("fit", "Show fit", FALSE, width = "150px")
 D <- checkboxInput("CI", "Show conf. interval", FALSE, width = "150px")
+NRESAMPS <- htmlOutput('trial_count')
 Panel <- tabsetPanel(
     tabPanel("One variable", plotOutput("r1", width = "300px")),
     tabPanel("Two variables", plotOutput("r2", width = "400px"))
@@ -95,30 +100,43 @@ graphics_r1 <- reactive({
   set.seed(101)
   
   P <- S$state$samp[[input$samp_n]] %>%
-    gf_jitter(height ~ x, shape = 1, size = 3, height = 0, width = 0.1 ) %>%
+    gf_point(height ~ x, shape = 1, size = 3, height = 0, width = 0.1 ) %>%
     gf_labs(x = "", y = "Height (in)") %>%
-    gf_lims(x = c(0.5, 1.5)) %>%
+    gf_lims(x = c(-1, 1)) %>%
     gf_theme(no_x_axis)
   if (input$fit) {
     mn <- mean(S$state$samp[[input$samp_n]]$height, na.rm = TRUE)
-    P <- P %>% gf_hline(yintercept = mn, size = 2)
+    
+    P <- do.call(gf_hline, list(P, yintercept = mn, size = 2))
+    # I have no idea why I have to do the above, 
+    # but the simple statement doesn't work
+    # P <- P %>% gf_hline(yintercept = mn, size = 2)
   }
  
   if (S$state$ntrials > 0) {
-    P <- P %>% gf_jitter(height ~ I(x-.2), 
-                         data = S$state$trials[[input$samp_n]][[S$state$ntrials]], 
-                         height = 0, color = "red", width = 0.1) 
+    For_display <- S$state$trials[[input$samp_n]][[S$state$ntrials]] %>%
+      group_by(height, mother, sex, x) %>%
+      summarize(multiplicity = n()) %>%
+      mutate(multiplicity = as.character(
+        ifelse(multiplicity > 5, 5, multiplicity)))
+    P <- P %>% gf_point(height ~ x, alpha = 0.5,
+                        data = For_display,
+                        size = ~ multiplicity, 
+                        height = 0, color = "red", width = 0.1) 
     if (input$fit) {
-      P <- P %>% gf_hline(yintercept = S$state$stats[[input$samp_n]]$mean, color = "red", alpha = 0.5)
+      P <- P %>% gf_hline(yintercept = S$state$stats[[input$samp_n]]$mean, 
+      color = "red", alpha = 0.25, size = 2)
     }
   }
   if (input$CI) {
-    tmp <- df_stats(~ height, data = S$state$samp[[input$samp_n]], a = ci.mean) %>% mutate(x = 1.2)
+    tmp <- df_stats(~ height, data = S$state$samp[[input$samp_n]], a = ci.mean) %>% mutate(x = 0)
     P <- P %>% gf_errorbar(a_height_upper + a_height_lower ~ x, data = tmp, 
                            color = "blue", size = 2, width = .1)
   }
 
-  P
+  P %>%
+    gf_refine(size_scale) %>%
+    gf_theme(legend.position = "none")
 })
 
 
@@ -126,7 +144,7 @@ graphics_r2 <- reactive({
   set.seed(101)
   
   P <- S$state$samp[[input$samp_n]] %>%
-    gf_jitter(height ~ mother, shape = 1, size = 3, height = 0.0, width = 0.25, alpha = .5 ) %>%
+    gf_jitter(height ~ mother, shape = 1, size = 3, height = 0.05, width = 0.05, alpha = .5 ) %>%
     gf_labs(x = "Mother's height", y = "Child's Height (in)") 
   if (input$fit) {
     fit <- coef(lm(height ~ mother, data = S$state$samp[[input$samp_n]]))
@@ -134,28 +152,41 @@ graphics_r2 <- reactive({
   }
   
   if (S$state$ntrials > 0) {
-    P <- P %>% gf_jitter(height ~ mother, 
-                         data = S$state$trials[[input$samp_n]][[S$state$ntrials]], 
-                         height = 0.25, color = "red", width = 0.25, alpha = .5) 
+    For_display <- S$state$trials[[input$samp_n]][[S$state$ntrials]] %>%
+      group_by(height, mother, sex) %>%
+      summarize(multiplicity = n()) %>%
+      mutate(multiplicity = as.character(
+                                ifelse(multiplicity > 5, 5, multiplicity)))
+    P <- P %>% gf_point(height ~ mother, 
+                         data = For_display,
+                         size = ~ multiplicity,
+                         height = 0.05, color = "red", width = 0.05, alpha = .5) 
     if (input$fit) {
       P <- P %>% gf_abline(intercept = S$state$stats[[input$samp_n]]$intercept,
-                           slope = S$state$stats[[input$samp_n]]$slope, color = "red", alpha = 0.5)
+                           slope = S$state$stats[[input$samp_n]]$slope, 
+                           color = "red", alpha = 0.25, size = 2)
     }
   }
   if (input$CI) {
     P <- P %>% gf_smooth(height ~ mother, method = "lm", data = S$state$samp[[input$samp_n]])
   }
 
-  P
+  P %>%
+    gf_refine(size_scale) %>%
+    gf_theme(legend.position = "none")
 })
 
 output$r1 <- renderPlot(graphics_r1())
 output$r2 <- renderPlot(graphics_r2())
 
-output$raw <- renderTable(get_samp())
+output$trial_count <- renderText({
+  nt <- S$state$ntrials
+  if (nt == 0) "No resampling trials run."
+  else paste(nt, "resampling trials run.")
+})
 ```
 
-<table><tr><td class="control">`r A` `r N` `r C` `r D` `r B`</td><td class="plot">`r Panel`</td></tr></table>
+<table><tr><td class="control">`r N` `r C` `r D` <hr> `r A` <br> `r NRESAMPS` <br> `r B`</td><td class="plot">`r Panel`</td></tr></table>
 
 
 

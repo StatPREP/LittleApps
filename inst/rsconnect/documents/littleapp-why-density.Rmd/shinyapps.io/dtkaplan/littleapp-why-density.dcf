@@ -5,8 +5,8 @@ account: dtkaplan
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 298807
-bundleId: 1266904
+bundleId: 1280627
 url: https://dtkaplan.shinyapps.io/littleapp-why-density/
-when: 1520970377.41803
+when: 1521648020.26679
 asMultiple: FALSE
 asStatic: FALSE

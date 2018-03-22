@@ -37,6 +37,6 @@ for all levels of the group.
 ribbon_data <- ribbon_for_violin(mtcars$mpg, vpos = 3)
 gf_ribbon(top + bottom ~ x, data = ribbon_data)
 # several groups
-ribbon_data <- ribbon_for_violin(mtcars$mpg, as.numeric(mtcars$cyl))
+ribbon_data <- ribbon_for_violin(mtcars$mpg, mtcars$cyl, vpos = 1:3)
 gf_ribbon(top + bottom ~ x, data = ribbon_data, fill = ~ group)
 }

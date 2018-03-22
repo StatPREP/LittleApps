@@ -1,0 +1,160 @@
+---
+title: "Center and spread"
+runtime: shiny
+output: html_document
+---
+
+
+```{r include = FALSE}
+library(NHANES)
+library(StatPREPshiny)
+library(ggformula)
+library(mosaicCore)
+library(dplyr)
+```
+```{r echo = FALSE}
+explanatory_vars <- c("No_explan_var", "Gender", "HomeOwn", "SmokeNow", "SexEver", "PregnantNow", "Depressed", "Work", "PhysActive")
+response_vars <- c("Age", "Poverty", "Pulse", "BMI",
+                   "TotChol", "BPSys1",
+                   "UrineVol1", "Weight", "Height", "DaysMentHlthBad", 
+                   "Age1stBaby", "PhysActiveDays",
+                   "SexNumPartnLife",
+                   "idealized_normal", "idealized_uniform")
+samp_sizes <- c(10, 20, 50, 100, 200, 500, 1000, 2000)
+RESPONSE <- selectInput("response", "Response variable",
+                 choices = response_vars, width = "150px")
+EXPLAN <- selectInput("explan", "Explanatory variable",
+                 choices = explanatory_vars, width = "150px")
+SAMP_N <- selectInput("samp_n", "Sample n", 
+                 choices = samp_sizes, selected = "200",
+                 width = "100px")
+SEED <- actionButton("seed", "New sample")
+COVER_LEVEL <- selectInput("cover_level", "Coverage level",
+                           choices = c("99%" = 0.99, "95%" = 0.95, 
+                                       "80%" = 0.80, "67%" = 0.67, "50%" = 0.50),
+                           selected = 0.95, width = "100px")
+SHOW_COVER <- checkboxInput("show_cover", "Show coverage interval.", FALSE, 
+                            width = "150px")
+SHOW_SD <- checkboxInput("show_sd", "Show standard deviation", FALSE, width = "150px")
+SHOW_CI <- checkboxInput("show_ci", "Show confidence interval", FALSE, width = "150px")
+SHOW_VIOLIN <- checkboxInput("show_violin", "Show density", FALSE, width = "150px")
+PLOT <- plotOutput("plot1", width = "500px")
+DISPLAY <- tabsetPanel(
+  tabPanel("graphics", PLOT)
+)
+
+```
+
+
+
+
+```{r echo = FALSE}
+response <- reactive({input$response})
+explan <- reactive({input$explan})
+samp_size <- reactive({as.numeric(input$samp_n)})
+
+the_data <- function() {
+  set.seed(input$seed)
+  res <- NHANES %>%
+    mutate(No_explan_var = " ", 
+           idealized_normal = rnorm(nrow(NHANES)),
+           idealized_uniform = runif(nrow(NHANES))) %>% 
+    .[c(response(), explan())] %>% 
+    na.omit() %>% 
+    sample_n(size = samp_size()) 
+}
+
+observe({
+  updateCheckboxInput(session, "show_cover", 
+          label = paste("Show", 
+                        round(100*as.numeric(req(input$cover_level))),
+                        "% coverage interval"))
+})
+
+for_quantiles <- reactive({
+  alpha <- (1 - as.numeric(input$cover_level))/2
+  c(alpha, 1 - alpha)
+})
+
+ylims <- reactive({
+  lims <- range(the_data()[[response()]])
+  lims + c(-0.2, 0.2) * diff(lims)
+})
+
+space_formula <- reactive({as.formula(paste(response(), "~ ", explan()))})
+color_formula <- reactive({as.formula(paste("~", explan()))})
+ruler_formula <- reactive({as.formula(paste("stat + sd ~ ", explan()))})
+
+stats <- reactive({
+  top <- function(x) {quantile(x, for_quantiles()[2])}
+  bottom <- function(x) {quantile(x, for_quantiles()[1])}
+  df_stats(space_formula(), data = the_data(), 
+           stat = mean, ci = ci.mean, sd = sd, 
+           Q1 = bottom,
+           Q2 = top,
+           median = median,
+           long_names = FALSE) %>%
+  mutate(stderr = (ci_upper - stat)/2)
+})
+
+graphics <- reactive({
+  set.seed(101)
+  P <- gf_jitter(space_formula(), data = the_data(),
+                 alpha = point_alpha(samp_size()),
+                 color = color_formula(), width = 0.1, height = 0) 
+  P <- P %>% gf_errorbar(as.formula(paste("stat + stat ~", explan())), 
+                         data = stats(), color = color_formula(), 
+                         width = 0.3, size = 2 ) 
+  
+  if (input$show_violin) {
+    P <- P %>%
+      gf_violin(space_formula(), data = the_data(),
+                alpha = 0.4, color = color_formula())
+  }
+  
+  if (input$show_cover) {
+    P <- P %>%
+      gf_segment(as.formula(paste("Q1 + Q2 ~ ", input$explan, "+", input$explan)),
+                 data = stats(), color = "black", size = 50, alpha = 0.2) %>%
+      gf_errorbar(as.formula(paste("median + median ~ ", input$explan)),
+                  data = stats(), color = "black", width = 0.3)
+  }
+  
+  if (input$show_sd) { 
+    P <- P %>% v_ruler(ruler_formula(), data = stats())
+  }
+  
+  if (input$show_ci) {
+    P <- P %>% 
+    gf_errorbar(as.formula(paste("ci_lower + ci_upper ~ ", input$explan)),
+                data = stats(), color = color_formula(), size = 1.5, width = 0.1)
+  }
+  
+  P %>% 
+     gf_theme(legend.position = "none") %>%
+     gf_lims(y = ylims())
+})
+
+output$plot1 <- renderPlot({
+  graphics()
+})
+```
+
+
+<table><tr><td class="control">`r RESPONSE` `r EXPLAN` `r SAMP_N` <hr> `r SHOW_COVER` `r COVER_LEVEL` `r SHOW_SD` `r SHOW_CI` `r SHOW_VIOLIN` `r SEED`  </td><td class="plot">`r DISPLAY`</td></tr></table>
+
+
+
+<style type="text/css">
+td.control {
+  border:5px solid gray;
+  border-radius:10px;
+  padding: 5px;
+  vertical-align: top;
+}
+td.plot {
+  border:5px solid gray;
+  padding: 5px;
+  border-radius:10px;
+  color: white;
+}
