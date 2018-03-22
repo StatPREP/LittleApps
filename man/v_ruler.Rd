@@ -4,8 +4,8 @@
 \alias{v_ruler}
 \title{Add rulers to a plot}
 \usage{
-v_ruler(object = NULL, gformula = NULL, data = NULL, nticks = 3,
-  color = "black", alpha = 1, size = 0.5, width = NULL)
+v_ruler(object = NULL, gformula = NULL, data = NULL, description = "sd",
+  nticks = 3, color = "black", alpha = 1, size = 0.5, width = NULL)
 }
 \description{
 This is still under development. In particular, I'm not sure how to pass

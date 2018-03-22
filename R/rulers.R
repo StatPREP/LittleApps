@@ -9,7 +9,7 @@
 #' v_ruler(center + length ~ x, data = rule_data, width = NULL)
 #'
 #' @export
-v_ruler <- function(object = NULL, gformula = NULL, data = NULL, nticks = 3,
+v_ruler <- function(object = NULL, gformula = NULL, data = NULL, description = "sd", nticks = 3,
                     color = "black", alpha = 1, size = 0.5, width = NULL) {
 
   others <- list(color = "black", alpha = 1, size = 0.5, width = 1)
@@ -50,7 +50,7 @@ v_ruler <- function(object = NULL, gformula = NULL, data = NULL, nticks = 3,
     rep_data[[length_var_name]] * tick_number
   bottom_tick_pos <- rep_data[[center_var_name]] +
     rep_data[[length_var_name]] * (tick_number - 1)
-  tick_name <- paste0(as.character(tick_number), "sd")
+  tick_name <- paste0(as.character(tick_number), description)
 
   rep_data[[".top."]] <- top_tick_pos
   rep_data[[".bottom."]] <- bottom_tick_pos
