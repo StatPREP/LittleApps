@@ -7,7 +7,7 @@ StatPREP tutorials can be written with embedded apps to perform computation. The
 To take a quick look at an app in this package, use the `select_app()` function.
 
 ```r
-library(StatPREPshiny)
+library(LittleApps)
 select_app()
 ```
 
@@ -18,7 +18,7 @@ This will let you choose an app and will run it in your system viewer.
 When you want to include an app in a tutorial or other interactive document (with `runtime: shiny`), refer to the app in a chunk in your document. The chunk will look like this:
 
 ````
-```{r child = system.file("density-graphs.Rmd", package = "StatPREPshiny")}
+```{r child = system.file("density-graphs.Rmd", package = "LittleApps")}
 ```
 ````
 

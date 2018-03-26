@@ -1,4 +1,4 @@
 library(testthat)
-library(StatPREPshiny)
+library(LittleApps)
 
-test_check("StatPREPshiny")
+test_check("LitleApps")

@@ -6,7 +6,7 @@ output: html_document
 
 
 ```{r include = FALSE}
-library(StatPREPshiny)
+library(LittleApps)
 library(mosaicModel)
 library(ggformula)
 library(dplyr)

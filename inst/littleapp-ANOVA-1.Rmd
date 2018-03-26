@@ -8,7 +8,7 @@ output: html_document
 library(NHANES)
 library(ggformula)
 library(dplyr)
-library(StatPREPshiny)
+library(LittleApps)
 knitr::opts_chunk$set(echo = TRUE)
 explanatory_vars <- c("Gender", "HomeOwn", "SmokeNow", "SexEver", "PregnantNow", "Depressed", "Work", "PhysActive" )
 response_vars <- c("Age", "Poverty", "Pulse", "BMI", "TotChol", "BPSys1", "UrineVol1", "Weight", "Height", "DaysMentHlthBad", "LittleInterest", "Age1stBaby", "PhysActiveDays", "SexNumPartnLife")
@@ -50,7 +50,7 @@ annotate_factor  <- function(x, before = NULL, after = NULL) {
 #reactive <- react_calc # comment this out for shiny mode
 #renderPlot <- renderText <- renderTable <- renderVerbatimText <- I
 # Leave the ! TRUE ==, that's a feature of all.equal()
-is_shiny <- ! TRUE == all.equal(reactive, StatPREPshiny::react_calc)
+is_shiny <- ! TRUE == all.equal(reactive, LittleApps::react_calc)
 if (! is_shiny) {
   input <- list(samp_n = 100, response = "Age", explan = "PhysActive", seed = 1, show_sd = TRUE)
   output <- list()

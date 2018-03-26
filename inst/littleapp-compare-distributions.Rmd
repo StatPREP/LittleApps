@@ -7,7 +7,7 @@ output: html_document
 ```{r include=FALSE}
 library(NHANES)
 library(ggformula)
-library(StatPREPshiny)
+library(LittleApps)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 

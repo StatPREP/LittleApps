@@ -10,7 +10,7 @@ library(shiny)
 library(miniUI)
 library(shinydashboard)
 knitr::opts_chunk$set(echo = FALSE)
-source(system.file("test_single_file/app.R", package = "StatPREPshiny"))
+source(system.file("test_single_file/app.R", package = "LittleApps"))
 ```
 
 ## Including a single file app
@@ -52,7 +52,7 @@ output$login_message <- renderText({input$login; "This is the message."})
 ## Including an Rmd app
 
 
-```{r child = system.file("compare-distributions.Rmd", package = "StatPREPshiny")}
+```{r child = system.file("compare-distributions.Rmd", package = "LittleApps")}
 ```
 
 

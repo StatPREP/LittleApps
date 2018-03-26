@@ -16,7 +16,7 @@ LA_var_help <- function(dataName, ..., line_length = 50L) {
     if (dataName %in% names(var_help_cache)) var_help_cache[[dataName]]
     else {
       fname <- paste0("variable_documentation/", dataName, ".txt")
-      source_file <- system.file(fname, package = "StatPREPshiny")
+      source_file <- system.file(fname, package = "LittleApps")
       if (source_file == "") stop("No variable documentation file named ", fname, ".")
       text <- readLines(source_file)
       var_help_cache[[dataName]] <- text

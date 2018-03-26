@@ -7,7 +7,7 @@ output: html_document
 
 ```{r include = FALSE}
 library(NHANES)
-library(StatPREPshiny)
+library(LittleApps)
 library(ggformula)
 library(mosaicCore)
 library(dplyr)
