@@ -4,7 +4,7 @@ library(ggformula)
 library(NHANES)
 library(dplyr)
 
-main_plot_function <- function(state, controls) {
+main_plot_function <-  function(state, controls) {
   F <- as.formula(paste(state$response, "~", state$explan))
   COLOR <- as.formula(paste("~", state$explan))
   do.call(gf_jitter, list(F, data = state$data,
