@@ -7,6 +7,7 @@ output: html_document
 ```{r include=FALSE}
 library(NHANES)
 library(ggformula)
+library(StatPREPshiny)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -18,8 +19,14 @@ B <- selectInput("explan", "Explanatory variable",
                  choices = c("Gender", "Education", "Work", "PregnantNow", "SmokeNow", "Depressed", "AgeDecade", "HardDrugs", "SexOrientation"), width = "100px")
 C <- checkboxGroupInput("layers", "Graphics layers:",
                         c("violin plot", "boxplot"), width = "100px")
-P <- plotOutput("plot1", width = "500px",
+PLOT <- plotOutput("plot1", width = "500px",
                 brush = brushOpts("eliminate", direction = "y", fill = NA))
+CODEBOOK <- verbatimTextOutput("codebook")
+DISPLAY <- tabsetPanel(
+  tabPanel("Graphics", PLOT),
+  tabPanel("Codebook", CODEBOOK)
+)
+
 ```
 
 ```{r echo = FALSE, context = "server"}
@@ -55,9 +62,12 @@ graphics <- reactive({
 
 
 output$plot1 <- renderPlot({graphics()})
+output$codebook <- renderText({
+    LA_var_help("NHANES", input$response, input$explan, line_length = 40L)
+})
 ```
 
-<table><tr><td class="control">`r A` `r B` `r C`</td><td class="plot">`r P`</td></tr></table>
+<table><tr><td class="control">`r A` `r B` `r C`</td><td class="plot">`r DISPLAY`</td></tr></table>
 
 
 

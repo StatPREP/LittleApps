@@ -12,6 +12,7 @@ library(mosaicData)
 library(ggformula)
 library(dplyr)
 library(NHANES)
+library(markdown)
 library(StatPREPshiny)
 explanatory_vars <- c("Gender", "HomeOwn", "SmokeNow", "SexEver", "PregnantNow", "Depressed", "Work", "PhysActive" )
 response_vars <- c("Age", "Poverty", "Pulse", "BMI", "TotChol", "BPSys1", "UrineVol1", "Weight", "Height", "DaysMentHlthBad", "LittleInterest", "Age1stBaby", "PhysActiveDays", "SexNumPartnLife")
@@ -34,17 +35,18 @@ N <- selectInput("samp_n", "Sample size:", choices = c(5, 10, 20, 50, 100, 500, 
                  selected = "50", width = "100px")
 C <- checkboxGroupInput("layers", "Inferential statistics",
                         c("T", "Conf. interval"), width = "150px", inline = TRUE)
-NINETY <- checkboxInput("show_90_level", "CI at 90%", FALSE)
-SEED <- actionButton("seed", "New sample")
-EV <- checkboxInput("equal_var", "Assume equal variance", FALSE)
-CENTER <- radioButtons("center_on", "T location:", choices = c("Left", "Right"), inline = TRUE)
+NINETY <- checkboxInput("show_90_level", "CI at 90%", FALSE, width = "150px")
+SEED <- actionButton("seed", "New sample",  width = "150px")
+EV <- checkboxInput("equal_var", "Assume equal variance", FALSE, width = "150px")
+CENTER <- radioButtons("center_on", "T location:", choices = c("Left", "Right"), inline = TRUE, width = "150px")
 PV <- htmlOutput("pvalue")
 P <- plotOutput("plot1", width = "500px",
                 brush = brushOpts("horiz_line", direction = "x", fill = NA))
-EXPLAIN <- imageOutput("explain_image") #Use the click attribute to handle the annotations.
-
+EXPLAIN <- htmlOutput("explain")
+CODEBOOK <- verbatimTextOutput("codebook")
 DISPLAY <- tabsetPanel(tabPanel("Main graphic", P), 
-                       tabPanel("Explain what's what", EXPLAIN))
+                       # tabPanel("Explain annotations", EXPLAIN),
+                       tabPanel("Codebook", CODEBOOK))
 keepers <- list(
   PregnantNow = c("Yes", "No"),
   SmokeNow = c("Yes", "No"),
@@ -60,9 +62,7 @@ keepers <- list(
 
 ```
 
-<table><tr><td class="control">`r A` `r B` `r N` `r C` `r PV` `r SEED` `r EV` `r CENTER` `r NINETY`  </td><td class="plot">`r DISPLAY`</td></tr></table>
-
-
+<table><tr><td class="control">`r A` `r B` `r N` `r C` `r PV` `r SEED` `r EV` `r CENTER` `r NINETY` <a href="http://StatPREP.org">Explain annotations</a> </td><td class="plot">`r DISPLAY`</td></tr></table>
 
 <style type="text/css">
 td.control {
@@ -77,7 +77,6 @@ td.plot {
   border-radius:10px;
   color: white;
 }
-
 </style>
 
 
@@ -85,10 +84,6 @@ td.plot {
 
 ```{r context = "server", echo = FALSE}
 the_width <- reactive({0.1})
-point_alpha <- function(n) {
-  pmin(1, 1.2 / 2^log10(n)) # a trick?
-}
-
 
 the_formula <- reactive({
   as.formula(paste(req(input$response), "~", req(input$explan)))
@@ -106,8 +101,8 @@ get_samp <- reactive( {
 })
 
 
-the_color <- reactive( {
-  the_formula()[c(1,3)]
+color_formula <- reactive( {
+  as.formula(paste("~", input$explan))
 })
 
 
@@ -141,44 +136,40 @@ t_interval <- reactive( {
 graphics <- reactive( {
   set.seed(101)
   width_val <- 0.1
-  alpha_val <- point_alpha(samp_n())
-  color_formula <- the_color()
-  
-  # I am NOT able to get the color set. I think this is due to the way ggformula handles 
-  # arguments.
 
   P <- gf_jitter(the_formula(), data = get_samp(), 
-                 color = color_formula,
-                 alpha = alpha_val,
+                 color = color_formula(),
+                 alpha = point_alpha(samp_n()),
                  width = 0.1,
                  height = 0,
                  show.legend = FALSE)
   
   P <- P %>% gf_errorbar(mn + mn ~ xpos,
-                        data = stats_interval(), color = color_formula,
-                        show.legend = FALSE, width = 3 * 0.1, size=2, alpha = .5)
+                        data = stats_interval(), color = color_formula(),
+                        show.legend = FALSE, 
+                        width = 3 * 0.1, size=2, alpha = .5)
   if ("Conf. interval" %in% input$layers) {
     P <- P %>%
-      gf_errorbar(as.formula(paste("ci_lower + ci_upper ~ ", input$explan)), data = stats_interval(),
-                  color = color_formula, 
+      gf_errorbar(as.formula(paste("ci_lower + ci_upper ~ ", input$explan)),
+                  data = stats_interval(),
+                  color = color_formula(), 
                   width = 1.3 * 0.1, size = 2, show.legend = FALSE)
   }
   
   if ("T" %in% input$layers) {
     tstats <- t_interval()
     P <- P %>% 
-      gf_errorbar(low + high ~ midpoint, data = tstats, width = 1, show.legend = FALSE) 
+      gf_errorbar(low + high ~ midpoint, data = tstats, 
+                  width = 1, show.legend = FALSE) 
   }
   set.seed(NULL)
   P
 })
 
 output$plot1 <- renderPlot(graphics())
-output$explain_image <- renderImage({
-
-  list(src = "images/explain-t-statistic.jpg")
-  },
-  deleteFile = FALSE # important!
-)
+output$codebook <- renderText({
+    LA_var_help("NHANES", input$response, input$explan, line_length = 40L)
+})
+output$explain <- renderText({HTML(includeMarkdown("t-statistic-explain.md"))})
 ```
 

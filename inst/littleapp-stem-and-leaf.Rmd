@@ -68,8 +68,12 @@ SHOW <- htmlOutput("show_val", width = "200px")
 QUIZ <- actionButton("quiz", "Quiz")
 QSHOW <- htmlOutput("show_quiz", width = "150px")
 WIN <- htmlOutput("win", width = "150px")
-P <- plotOutput("plot1", width = "500px",
+PLOT <- plotOutput("plot1", width = "500px",
                 click = clickOpts("user_selected"))
+CODEBOOK <- verbatimTextOutput("codebook")
+DISPLAY <- tabsetPanel(tabPanel("Graphics", PLOT), 
+                       tabPanel("Codebook", CODEBOOK))
+
 ```
 
 ```{r echo = FALSE, context = "server"}
@@ -156,11 +160,14 @@ output$raw <- renderText({
   paste0("<pre>", paste(chars, collapse = "<br>"), "</pre>")
 })
 
+output$codebook <- renderText({
+    LA_var_help("NHANES", input$response, input$explan, line_length = 40L)
+})
 ```
 
 `r RAW`
 
-<table><tr><td class="control">`r A` `r NS` `r SHOW` `r QUIZ` `r QSHOW` `r WIN`</td><td class="plot">`r P`</td></tr></table>
+<table><tr><td class="control">`r A` `r NS` `r SHOW` `r QUIZ` `r QSHOW` `r WIN`</td><td class="plot">`r DISPLAY`</td></tr></table>
 
 
 

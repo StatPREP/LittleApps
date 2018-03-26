@@ -29,9 +29,11 @@ C <- radioButtons("display", "Type of display:",
                         c("histogram", "density"), width = "130px")
 P <- plotOutput("plot1", width = "500px")
 Pviolin <- plotOutput("pviolin", width = "500px")
+CODEBOOK <- verbatimTextOutput("codebook")
 DISPLAY <- tabsetPanel(
   tabPanel("Count/density axis", P),
-  tabPanel("Response vs Explanatory", Pviolin)
+  tabPanel("Response vs Explanatory", Pviolin),
+  tabPanel("Codebook", CODEBOOK)
 )
 ```
 
@@ -61,6 +63,9 @@ output$pviolin <- renderPlot({
             width = 0.2) %>%
   gf_violin(the_violin_formula(), data = NHANES, alpha = 0.5,
             fill = "green", color = "green")
+})
+output$codebook <- renderText({
+    LA_var_help("NHANES", input$response, input$explan, line_length = 40L)
 })
 ```
 

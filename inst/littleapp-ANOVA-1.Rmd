@@ -27,7 +27,11 @@ STATS <- verbatimTextOutput("r-and-p")
 F_REPORT <- verbatimTextOutput("stats")
 SEED <- actionButton("seed", "New Sample")
 PLOT <- plotOutput("plot1", width = "500px")
-DISPLAY <- tabsetPanel(tabPanel("Graphics", PLOT), tabPanel("F-test", F_REPORT))
+CODEBOOK <- verbatimTextOutput("codebook")
+DISPLAY <- tabsetPanel(tabPanel("Graphics", PLOT), 
+                       tabPanel("F-test", F_REPORT),
+                       tabPanel("Codebook", CODEBOOK)
+                       )
 ```
 
 
@@ -166,6 +170,9 @@ F_report <- reactive({
 output$plot1 <- renderPlot({graphics()})
 output$`r-and-p` <- renderText({r_and_p_string()})
 output$stats <- renderText({F_report()})
+output$codebook <- renderText({
+  LA_var_help("NHANES", input$response, input$explan, line_length = 40L)
+})
 ```
   
 <table><tr><td class="control">`r SAMPN` `r A` `r B` `r SHOWSD` `r STATS` `r SEED` </td><td class="plot">`r DISPLAY`</td></tr></table>

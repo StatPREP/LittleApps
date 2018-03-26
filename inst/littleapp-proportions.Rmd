@@ -49,8 +49,10 @@ SMOOTH <- selectInput("smooth", "Smoothing/Curviness", choices = 1:6, width = "1
 PLOT <- plotOutput("plot", width = "500px",
                 brush = brushOpts("horiz_line", direction = "x", fill = NA))
 TABLE <- verbatimTextOutput("cross-tab")
+CODEBOOK <- verbatimTextOutput("codebook")
 DISPLAY <- tabsetPanel(tabPanel("Graphics", PLOT), 
-                       tabPanel("Tabulate", TABLE))
+                       tabPanel("Tabulate", TABLE),
+                       tabPanel("Codebook", CODEBOOK))
 ```
 
 <!-- display the input controls and output spaces -->
@@ -409,6 +411,9 @@ output$plot <- renderPlot({
   if (inherits(res, "try-error")) NULL
   else res
 }) 
+output$codebook <- renderText({
+    LA_var_help("NHANES", input$response, input$explan, line_length = 40L)
+})
 ```
 
 <style type="text/css">

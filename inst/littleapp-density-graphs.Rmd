@@ -27,8 +27,14 @@ C <- checkboxGroupInput("layers", "Graphics layers:",
                         c("density", "histogram", "violin"), width = "100px")
 F <- radioButtons("graph_format", "Graph format", choices = c("density vs response", "response vs explanatory"), width = "130px")
 S <- sliderInput("bw", "Smoothing:", min = 1, max = 20, value = 3, width = "150px")
-P <- plotOutput("plot1", width = "500px",
+PLOT <- plotOutput("plot1", width = "500px",
                 brush = brushOpts("eliminate", direction = "x", fill = NA))
+CODEBOOK <- verbatimTextOutput("codebook")
+DISPLAY <- tabsetPanel(
+  tabPanel("Graphics", PLOT),
+  tabPanel("Codebook", CODEBOOK)
+)
+
 ```
 
 
@@ -154,10 +160,14 @@ graphics <- reactive({
 
 output$plot1 <- renderPlot({
   if (input$graph_format == "density vs response") graphics()
-  else violin_graphics()})
+  else violin_graphics()
+})
+output$codebook <- renderText({
+    LA_var_help("NHANES", input$response, input$explan, line_length = 40L)
+})
 ```
 
-<table><tr><td class="control">`r RESPONSE` `r EXPLAN` `r SAMP_N` `r C` `r S` `r F`</td><td class="plot">`r P`</td></tr></table>
+<table><tr><td class="control">`r RESPONSE` `r EXPLAN` `r SAMP_N` `r C` `r S` `r F`</td><td class="plot">`r DISPLAY`</td></tr></table>
 
 
 

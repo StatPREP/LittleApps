@@ -42,9 +42,12 @@ PLOT <- plotOutput("plot", width = "500px",
                 brush = brushOpts("horiz_line", direction = "x", fill = NA))
 ANOVA <- verbatimTextOutput("anova_report")
 REGRESSION <- verbatimTextOutput("regression_report")
+CODEBOOK <- verbatimTextOutput("codebook")
 DISPLAY <- tabsetPanel(tabPanel("Graphics", PLOT), 
                        tabPanel("ANOVA report", ANOVA), 
-                       tabPanel("Regression report", REGRESSION))
+                       tabPanel("Regression report", REGRESSION),
+                       tabPanel("Codebook", CODEBOOK))
+
 ```
 
 <!-- display the input controls and output spaces -->
@@ -90,6 +93,11 @@ is_interaction <- reactive({
 fit_model <- reactive({
   lm(model_formula(), data = get_sample())
 })
+ebar_width <- reactive({
+   x_range <- range(get_data()[[input$explan]], na.rm = TRUE)
+   diff(x_range) / 15
+})
+
 get_data  <- reactive({
   NHANES
 })
@@ -112,6 +120,7 @@ scatter_plot <- reactive({
 })
 regression_report <- reactive({paste(capture.output(summary(fit_model()))[-(1:8)], collapse = "\n")})
 anova_report <- reactive({paste(capture.output(anova(fit_model())), collapse = "\n")})
+
 graphics <- reactive({
   # Get the model functions for plotting
   mfundata <- mod_eval(fit_model(), nlevels = Inf, interval = input$interval_type)
@@ -136,9 +145,9 @@ graphics <- reactive({
     gf_theme(legend.position = "top") 
     
   P <- P %>% gf_errorbar(model_output + model_output ~ x_mod_vals, data = mod_vals, 
-                 width = ebar_width, color = "red") %>%
+                 width = ebar_width(), color = "red") %>%
              gf_errorbar(raw + raw ~ x_raw_vals, data = mod_vals, 
-                 width = ebar_width, color = "red")
+                 width = ebar_width(), color = "red")
 
   # # confidence bands
   # # gf_ribbon() not working for some unknown reason.
@@ -166,7 +175,7 @@ graphics <- reactive({
                           color = "black", size = 0.1)
   
   P <- P %>% gf_segment(base + top ~ x + x, data = std_bars, 
-                          size = ebar_width/2, color = "black", alpha = 0.5)
+                          size = ebar_width()/2, color = "black", alpha = 0.5)
     
   P
 })
@@ -180,6 +189,10 @@ graphics()
 output$plot <- renderPlot({graphics()}) 
 output$anova_report <- renderText({anova_report()})
 output$regression_report <- renderText({regression_report()})
+output$codebook <- renderText({
+  LA_var_help("NHANES", input$response, input$explan, input$covar, 
+              line_length = 40L)
+})
 ```
 
 <style type="text/css">
