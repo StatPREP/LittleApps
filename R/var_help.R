@@ -23,8 +23,12 @@ LA_var_help <- function(dataName, ..., line_length = 50L) {
       text
     }
 
-    vnames = list(...)
+    vnames = c(dataName, list(...))
     res <- lapply(vnames, FUN = function(nm) {text[grep(paste0("^", nm,":"), text)]})
+    res[[1]] <- paste("The", dataName, "data:",
+                      gsub("^.{3,20}:", "", res[[1]]),
+                           "--------------------\n\nVariables:")
+
     res <- unlist(res)
 
     res <- paste(res, collapse = "\n\n")
