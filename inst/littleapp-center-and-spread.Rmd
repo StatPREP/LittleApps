@@ -33,7 +33,7 @@ COVER_LEVEL <- selectInput("cover_level", "... at coverage level",
                            choices = c("99%" = 0.99, "95%" = 0.95, 
                                        "80%" = 0.80, "67%" = 0.67, "50%" = 0.50),
                            selected = 0.95, width = "100px")
-SHOW_COVER <- checkboxInput("show_cover", "Show coverage interval", FALSE, 
+SHOW_COVER <- checkboxInput("show_cover", "Show coverage range", FALSE, 
                             width = "150px")
 SHOW_MEAN <- checkboxInput("show_mean", "mean", FALSE, width = "150px")
 SHOW_SD <- checkboxInput("show_sd", "standard deviation", FALSE, width = "150px")
