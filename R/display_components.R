@@ -33,9 +33,11 @@ main_display <- function(
   PLOT <- plotOutput("plot", brush = brush)
   EXPLAIN <- htmlOutput("explain")
   CODEBOOK <- verbatimTextOutput("codebook")
+  R_COMMANDS <- htmlOutput("code")
   DISPLAY <- tabsetPanel(tabPanel("Graphic", PLOT),
                          tabPanel("Explain", EXPLAIN),
-                         tabPanel("Codebook", CODEBOOK))
+                         tabPanel("Codebook", CODEBOOK),
+                         tabPanel("R Commands", R_COMMANDS))
   COVARS <- selectizeInput("covar", "Covariates",
                            covars, selected = "None", multiple = multiple_covariates)
   fluidRow(

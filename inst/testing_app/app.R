@@ -123,8 +123,12 @@ app1 <- function(input, output) {
     main_plot_function(V, input)
   })
   output$codebook <- renderText({
-     LA_var_help("NHANES", input$response, input$explan, line_length = 40L)
+     LA_var_help("NHANES", V$response, V$explan, V$covar, line_length = 40L)
    })
+
+  output$explain <- renderText({HTML(includeMarkdown("explain.md"))})
+  output$code <- renderText({HTML(includeMarkdown("code.md"))})
+
 }
 
 
