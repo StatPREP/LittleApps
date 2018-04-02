@@ -8,7 +8,7 @@
 #' @return a text string with the descriptions of the requested variables
 #'
 #' @examples
-#' la_var_help("NHANES", "Age", "SmokeNow")
+#' LA_var_help("NHANES", "Age", "SmokeNow")
 #'
 #' @export
 LA_var_help <- function(dataName, ..., line_length = 50L) {
@@ -23,7 +23,8 @@ LA_var_help <- function(dataName, ..., line_length = 50L) {
       text
     }
 
-    vnames = c(dataName, list(...))
+    vnames <- c(dataName, unlist(list(...)))
+
     res <- lapply(vnames, FUN = function(nm) {text[grep(paste0("^", nm,":"), text)]})
     res[[1]] <- paste("The", dataName, "data:",
                       gsub("^.{3,20}:", "", res[[1]]),

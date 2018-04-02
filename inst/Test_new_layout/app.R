@@ -32,7 +32,7 @@ keepers <- list(
 ui <- fluidPage(
   h2("Two-sample t test"),
   fluidRow(
-    column(3,
+    column(2,
            selectInput('response', 'Response Variable', response_vars),
            selectInput('explan', 'Explanatory Var.', explanatory_vars),
            selectInput('covar', 'Covariates', c('None')),

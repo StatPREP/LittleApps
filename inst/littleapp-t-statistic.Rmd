@@ -14,7 +14,7 @@ library(dplyr)
 library(NHANES)
 library(markdown)
 library(LittleApps)
-explanatory_vars <- c("Gender", "HomeOwn", "SmokeNow", "SexEver", "PregnantNow", "Depressed", "Work", "PhysActive" )
+explanatory_vars <- c("Gender", "HomeOwn", "SmokeNow", "SexEver", "PregnantNow", "Depressed", "Work", "PhysActive", "LittleInterest" )
 response_vars <- c("Age", "Poverty", "Pulse", "BMI", "TotChol", "BPSys1", "UrineVol1", "Weight", "Height", "DaysMentHlthBad", "LittleInterest", "Age1stBaby", "PhysActiveDays", "SexNumPartnLife")
 NHANES <- NHANES %>% filter(Age >= 18)
 ```
@@ -31,14 +31,17 @@ A <- selectInput("response", "Response variable",
                  choices = response_vars, width = "150px")
 B <- selectInput("explan", "Explanatory variable",
                  choices = explanatory_vars, width = "150px")
-N <- selectInput("samp_n", "Sample size:", choices = c(5, 10, 20, 50, 100, 500, 1000),
+N <- selectInput("samp_n", "Sample size:", 
+                 choices = c(5, 10, 20, 50, 100, 200, 500, 1000),
                  selected = "50", width = "100px")
 C <- checkboxGroupInput("layers", "Inferential statistics",
                         c("T", "Conf. interval"), width = "150px", inline = TRUE)
 NINETY <- checkboxInput("show_90_level", "CI at 90%", FALSE, width = "150px")
 SEED <- actionButton("seed", "New sample",  width = "150px")
 EV <- checkboxInput("equal_var", "Assume equal variance", FALSE, width = "150px")
-CENTER <- radioButtons("center_on", "T location:", choices = c("Left", "Right"), inline = TRUE, width = "150px")
+CENTER <- radioButtons("center_on", "T location:", 
+                       choices = c("Left", "Right"), 
+                       inline = TRUE, width = "150px")
 PV <- htmlOutput("pvalue")
 P <- plotOutput("plot1", width = "500px",
                 brush = brushOpts("horiz_line", direction = "x", fill = NA))
@@ -56,7 +59,7 @@ keepers <- list(
   PhysActive = c("Yes", "No"),
   SexEver = c("Yes", "No"),
   Gender = c("male", "female"),
-  LittleInterest = c("None", "AlmostAll")
+  LittleInterest = c("None", "Several")
 )
 
 

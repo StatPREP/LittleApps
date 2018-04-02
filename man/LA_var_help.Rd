@@ -21,6 +21,6 @@ a text string with the descriptions of the requested variables
 Get descriptions of variables
 }
 \examples{
-la_var_help("NHANES", "Age", "SmokeNow")
+LA_var_help("NHANES", "Age", "SmokeNow")
 
 }

@@ -1,5 +1,9 @@
 NHANES: This is survey data collected by the US National Center for Health Statistics (NCHS) which has conducted a series of health and nutrition surveys since the early 1960's. Since 1999 approximately 5,000 individuals of all ages are interviewed in their homes every year and complete the health examination component of the survey. The health examination is conducted in a mobile examination centre (MEC).
 
+ID: Participant identifier
+
+SurveyYr: Which survey the participant participated in.
+
 Gender: Gender (sex) of study participant coded as male or female
 
 Age: Age in years at screening of study participant. Note: Subjects 80 years or older were recorded as 80.

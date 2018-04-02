@@ -1,0 +1,11 @@
+---
+output: 
+  html_document: 
+    keep_md: yes
+---
+This is where the code explanation will be ...
+
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+library(dplyr)
+library(mosaic)
+```

@@ -7,7 +7,7 @@
 main_display(sample_sizes = c(5, 10, 20, 50, 100, 500, 1000),
   brush = brushOpts("horiz_line", direction = "y", fill = NA),
   response_vars = NULL, explan_vars = "None", covars = "None",
-  multiple_covariates = FALSE)
+  multiple_covariates = FALSE, balance_groups = FALSE, ...)
 }
 \arguments{
 \item{sample_sizes}{numerical vector giving allowable sample sizes}
@@ -21,6 +21,10 @@ main_display(sample_sizes = c(5, 10, 20, 50, 100, 500, 1000),
 \item{covars}{character vector giving names of response variables}
 
 \item{multiple_covariates}{Logical. If \code{TRUE}, allow multiple covariates to be selected.}
+
+\item{balance_groups}{Logical. If \code{TRUE}, add a checkbox to put n in each group}
+
+\item{...}{Other shiny controls to be added to data-specification panel}
 }
 \value{
 A shiny tag that can be displayed as one entity.

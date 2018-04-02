@@ -37,7 +37,7 @@ get_var_names <- function(data,
     if (is.numeric(x) && type == "quantitative") return(TRUE)
 
     # Rule out any with too many levels
-    nlevels <- length(unique(x))
+    nlevels <- sum( ! is.na(unique(x))) # NA doesn't count
     if (nlevels > max_levels) return(FALSE)
 
     if (type == "categorical" ) {

@@ -16,7 +16,8 @@
 #' @param explan_vars character vector giving names of response variables
 #' @param covars character vector giving names of response variables
 #' @param multiple_covariates Logical. If `TRUE`, allow multiple covariates to be selected.
-#
+#' @param balance_groups Logical. If `TRUE`, add a checkbox to put n in each group
+#' @param ... Other shiny controls to be added to data-specification panel
 #'
 #'
 #' @return A shiny tag that can be displayed as one entity.
@@ -28,7 +29,9 @@ main_display <- function(
   response_vars = NULL,
   explan_vars = "None",
   covars = "None",
-  multiple_covariates = FALSE) {
+  multiple_covariates = FALSE,
+  balance_groups = FALSE,
+  ...) {
 
   PLOT <- plotOutput("plot", brush = brush)
   EXPLAIN <- htmlOutput("explain")
@@ -38,17 +41,21 @@ main_display <- function(
                          tabPanel("Explain", EXPLAIN),
                          tabPanel("Codebook", CODEBOOK),
                          tabPanel("R Commands", R_COMMANDS))
-  COVARS <- selectizeInput("covar", "Covariates",
-                           covars, selected = "None", multiple = multiple_covariates)
   fluidRow(
-    column(3,
+    column(3, # Data specification panel
            selectInput('response', 'Response Variable', response_vars),
            selectInput('explan', 'Explanatory Var.', explan_vars),
-           COVARS,
+           selectizeInput("covar", "Covariates", covars,
+                          multiple = multiple_covariates),
            selectInput("samp_n", "Sample size", choices = c(5, 10, 20, 50, 100, 500, 1000),
                        selected = "50"),
+           if (balance_groups)
+             checkboxInput("balance_groups", "Balance groups", FALSE)
+           else NULL,
            hr(),
-           actionButton("seed", "Take new sample")),
+           actionButton("seed", "Take new sample"),
+           ...),
+    # Display tabset
     column(6,DISPLAY)
   )
 }
