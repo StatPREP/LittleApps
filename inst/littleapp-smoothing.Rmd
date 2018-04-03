@@ -211,12 +211,3 @@ td.plot {
 
 </style>
 
-
-
-
-```{r context = "server", echo = FALSE}
-the_width <- reactive({0.1})
-point_alpha <- function(n) {
-  pmin(1, 1.2 / 2^log10(n)) # a trick?
-}
-

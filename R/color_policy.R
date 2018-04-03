@@ -60,7 +60,7 @@ LA_color <- function(component = c("sample", "resample_vals", "resample_trial", 
 
 #' @export
 point_alpha <- function(n) {
-  pmin(1, 1.2 / 2^log10(n)) # a trick?
+  pmin(1, 0.2 + 1.6 / 2^log10(n)) # a trick?
 }
 
 

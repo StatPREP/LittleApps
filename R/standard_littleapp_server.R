@@ -35,12 +35,10 @@
 #'
 #' @export
 standard_littleapp_server <- function(session, input, output, V) {
-  #V <- reactiveValues()
+  #V <- reactiveValues() # This is outside the function
   get_data <- reactive({
-    res <- NHANES[, c(input$explan, input$response, input$covar)]
-
+    res <- V$Raw_data[, c(input$explan, input$response, input$covar)]
     res %>% na.omit()
-
   })
   get_samp <- reactive( {
     if (input$seed > 0) set.seed(as.numeric(input$seed))

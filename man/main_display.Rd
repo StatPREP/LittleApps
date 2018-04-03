@@ -4,8 +4,8 @@
 \alias{main_display}
 \title{Layout utilities for little apps}
 \usage{
-main_display(sample_sizes = c(5, 10, 20, 50, 100, 500, 1000),
-  brush = brushOpts("horiz_line", direction = "y", fill = NA),
+main_display(name = "Name of app", sample_sizes = c(5, 10, 20, 50, 100, 500,
+  1000), brush = brushOpts("horiz_line", direction = "y", fill = NA),
   response_vars = NULL, explan_vars = "None", covars = "None",
   multiple_covariates = FALSE, balance_groups = FALSE, ...)
 }

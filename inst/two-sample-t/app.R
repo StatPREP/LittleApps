@@ -75,6 +75,7 @@ stats_annot_function <- function(P, F, COLOR, state) {
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   main_display(
+    name = "Two-sample t",
     response_vars = get_var_names(NHANES, type = "quantitative"),
     explan_vars = get_var_names(NHANES, type = "categorical", max_levels = 2),
     covars = list("Not relevant to t statistic." = ""), #get_var_names(NHANES, type = "all"),
@@ -110,6 +111,7 @@ ui <- fluidPage(
 server <- function(session, input, output) {
   # The boilerplate app
   V <- reactiveValues()
+  V$Raw_data <- NHANES
   standard_littleapp_server(session, input, output, V)
   observe({
     # These are specific to this app.

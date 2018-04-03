@@ -24,6 +24,7 @@
 #'
 #' @export
 main_display <- function(
+  name = "Name of app",
   sample_sizes = c(5,10,20,50,100,500,1000),
   brush = brushOpts("horiz_line", direction = "y", fill = NA),
   response_vars = NULL,
@@ -43,12 +44,15 @@ main_display <- function(
                          tabPanel("R Commands", R_COMMANDS))
   fluidRow(
     column(3, # Data specification panel
+           h4("Little App:"),
+           h4(name), hr(),
            selectInput('response', 'Response Variable', response_vars),
            selectInput('explan', 'Explanatory Var.', explan_vars),
            selectizeInput("covar", "Covariates", covars,
                           multiple = multiple_covariates),
-           selectInput("samp_n", "Sample size", choices = c(5, 10, 20, 50, 100, 500, 1000),
-                       selected = "50"),
+           selectInput("samp_n", "Sample size",
+                       choices = c(5, 10, 20, 50, 100, 200, 500, 1000),
+                       selected = "100"),
            if (balance_groups)
              checkboxInput("balance_groups", "Balance groups", FALSE)
            else NULL,
