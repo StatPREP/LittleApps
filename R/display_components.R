@@ -54,7 +54,7 @@ main_display <- function(
                        choices = c(5, 10, 20, 50, 100, 200, 500, 1000),
                        selected = "100"),
            if (stratify_sampling)
-             checkboxInput("stratify_sampling", "Stratify sampling", FALSE)
+             checkboxInput("stratify", "Stratify sampling", FALSE)
            else NULL,
            hr(),
            actionButton("seed", "Take new sample"),

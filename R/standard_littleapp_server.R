@@ -42,7 +42,7 @@ standard_littleapp_server <- function(session, input, output, V) {
   })
   get_samp <- reactive( {
     if (input$seed > 0) set.seed(as.numeric(input$seed))
-    res <- if (stratify_sampling()) {
+    res <- if (V$stratify_sampling) {
       get_data() %>% group_by_(V$explan)
     } else {
       get_data()
@@ -65,7 +65,7 @@ standard_littleapp_server <- function(session, input, output, V) {
 
     V$samp_n <<- as.numeric(input$samp_n)
     V$shuffle <<- shuffle_input()
-    V$stratify_sampling <<- stratify_sampling()
+    V$stratify_sampling <<- stratify_sampling_val()
 
     V$data <<- get_samp()
 
@@ -77,9 +77,14 @@ standard_littleapp_server <- function(session, input, output, V) {
     else FALSE
   })
 
-  stratify_sampling <- reactive({
-    if ("stratify_sampling" %in% names(input)) input$stratify_samping
-    else FALSE
+
+  stratify_sampling_val <- reactive({
+    res <- if ("stratify" %in% names(input)) {
+      input$stratify
+    } else FALSE
+
+    return(res)
+
   })
 
 

@@ -34,7 +34,7 @@ ui <- fluidPage(
                     "No_explanatory_variable"),
     covars = list("None used in this app." = ""), #get_var_names(NHANES, type = "all"),
     multiple_covariates = TRUE,
-    stratify_sampling = FALSE
+    stratify_sampling = TRUE
     ),
   hr(),
   # App-specific controls

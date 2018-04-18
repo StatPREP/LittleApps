@@ -29,8 +29,8 @@ ui <- fluidPage(
     explan_vars = get_var_names(NHANES, type = "categorical", max_levels = 2),
     covars = list("Not relevant to t statistic." = ""), #get_var_names(NHANES, type = "all"),
     multiple_covariates = TRUE,
-    stratify_sampling = FALSE
-    I'm trying to get this to work when stratify_sampling is TRUE
+    stratify_sampling = TRUE
+    #I'm trying to get this to work when stratify_sampling is TRUE
     ),
   hr(),
   # App-specific controls
