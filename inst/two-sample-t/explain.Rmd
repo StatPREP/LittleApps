@@ -1,0 +1,38 @@
+---
+title: 'Little App Guide: two-sample t'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(LittleApps)
+library(dplyr)
+library(forcats)
+library(NHANES)
+library(mosaic)
+knitr::opts_chunk$set(echo = FALSE)
+# Dicotomize some variables of particular interest
+NHANES <- NHANES %>%
+  mutate(PregnantNow = fct_recode(PregnantNow, NULL = "Unknown"),
+         HomeOwn     = fct_recode(HomeOwn,    NULL = "Other" ),
+         Depressed   = fct_recode(Depressed,   Several = "Most"),
+         Work        = fct_recode(Work, NotWorking = "Looking"),
+         LittleInterest = fct_recode(LittleInterest, Several = "Most"))
+get_data <- function(V) {
+  NHANES[ , c(V$explan, V$response)] %>%
+    na.omit() %>%
+    sample_n(size = V$samp_n)
+}
+```
+
+A classical method ...
+
+```{r}
+V <- list()
+V$samp_n <- 200
+V$response <- "Poverty"
+V$explan <- "Work"
+V$model_formula <- Poverty ~ Work
+V$data <- get_data(V)
+gf_jitter(V$model_formula, data = V$data)
+```
+

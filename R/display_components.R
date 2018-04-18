@@ -16,7 +16,7 @@
 #' @param explan_vars character vector giving names of response variables
 #' @param covars character vector giving names of response variables
 #' @param multiple_covariates Logical. If `TRUE`, allow multiple covariates to be selected.
-#' @param balance_groups Logical. If `TRUE`, add a checkbox to put n in each group
+#' @param stratify_sampling Logical. If `TRUE`, add a checkbox to put n in each group
 #' @param ... Other shiny controls to be added to data-specification panel
 #'
 #'
@@ -31,7 +31,7 @@ main_display <- function(
   explan_vars = "None",
   covars = "None",
   multiple_covariates = FALSE,
-  balance_groups = FALSE,
+  stratify_sampling = FALSE,
   ...) {
 
   PLOT <- plotOutput("plot", brush = brush)
@@ -53,8 +53,8 @@ main_display <- function(
            selectInput("samp_n", "Sample size",
                        choices = c(5, 10, 20, 50, 100, 200, 500, 1000),
                        selected = "100"),
-           if (balance_groups)
-             checkboxInput("balance_groups", "Balance groups", FALSE)
+           if (stratify_sampling)
+             checkboxInput("stratify_sampling", "Stratify sampling", FALSE)
            else NULL,
            hr(),
            actionButton("seed", "Take new sample"),

@@ -35,14 +35,14 @@
 #'
 #' @export
 standard_littleapp_server <- function(session, input, output, V) {
-  #V <- reactiveValues() # This is outside the function
+  #V <- reactiveValues() # This is created outside the function
   get_data <- reactive({
     res <- V$Raw_data[, c(input$explan, input$response, input$covar)]
     res %>% na.omit()
   })
   get_samp <- reactive( {
     if (input$seed > 0) set.seed(as.numeric(input$seed))
-    res <- if (in_each_group_input()) {
+    res <- if (stratify_sampling()) {
       get_data() %>% group_by_(V$explan)
     } else {
       get_data()
@@ -65,7 +65,7 @@ standard_littleapp_server <- function(session, input, output, V) {
 
     V$samp_n <<- as.numeric(input$samp_n)
     V$shuffle <<- shuffle_input()
-    V$in_each_group <<- in_each_group_input()
+    V$stratify_sampling <<- stratify_sampling()
 
     V$data <<- get_samp()
 
@@ -77,8 +77,8 @@ standard_littleapp_server <- function(session, input, output, V) {
     else FALSE
   })
 
-  in_each_group_input <- reactive({
-    if ("balance_groups" %in% names(input)) input$balance_groups
+  stratify_sampling <- reactive({
+    if ("stratify_sampling" %in% names(input)) input$stratify_samping
     else FALSE
   })
 

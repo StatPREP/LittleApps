@@ -13,82 +13,6 @@ NHANES <- NHANES %>%
          idealized_uniform = runif(nrow(NHANES)),
          No_explanatory_variable = " ")
 
-main_plot_function <- function(state) {
-  if (is.null(state$model_formula) || is.null(state$data)) return(NULL)
-  set.seed(101)
-  alpha <- (1 - as.numeric(state$range_level))/2
-  for_quantiles <- c(alpha, 1 - alpha)
-  top <- function(x) {as.numeric(quantile(x, for_quantiles[2]))}
-  bottom <- function(x) {as.numeric(quantile(x, for_quantiles[1]))}
-  stats <-
-    df_stats(state$model_formula, data = state$data,
-             stat = mean, ci = ci.mean, sd = sd,
-             Q1 = bottom,
-             Q2 = top,
-             median = median,
-             ci_med = ci.median,
-             ci_sd = ci.sd,
-             long_names = FALSE) %>%
-    mutate(stderr = (ci_upper - stat)/2,
-           sd_upper = stat + ci_sd_upper,
-           sd_lower = stat + ci_sd_lower)
-  P <- gf_jitter(state$model_formula, data = state$data,
-                 alpha = point_alpha(state$samp_n),
-                 color = state$color_formula, width = 0.1, height = 0)
-
-
-  if (state$show_mean) {
-    P <- P %>%
-      gf_errorbar(as.formula(paste("stat + stat ~", state$explan)),
-                  data = stats, color = state$color_formula,
-                  width = 0.3, size = 2 )
-
-    if (state$show_ci) {
-      P <- P %>%
-        gf_errorbar(as.formula(
-          paste("ci_lower + ci_upper ~ ", state$explan)),
-          data = stats, color = state$color_formula,
-          size = 1.5, width = 0.1)
-    }
-  }
-
-  if (state$show_violin) {
-    P <- P %>%
-      gf_violin(state$model_formula, data = state$data,
-                alpha = 0.4, color = state$color_formula)
-  }
-
-  if (state$show_coverage) {
-    P <- P %>%
-      gf_segment(as.formula(paste("Q1 + Q2 ~ ", state$explan, "+", state$explan)),
-                 data = stats, color = "blue", size = 50, alpha = 0.2) %>%
-      gf_errorbar(as.formula(paste("median + median ~ ", state$explan)),
-                  data = stats, color = "blue", width = 0.25)
-
-
-    if (state$show_ci) {
-      P <- P %>%
-        gf_errorbar(as.formula(
-          paste("ci_med_lower + ci_med_upper ~", state$explan)),
-          data = stats,
-          color = "blue", width = 0.2)
-    }
-  }
-
-  if (state$show_sd) {
-    P <- P %>% v_ruler(state$ruler_formula, data = stats)
-    if (state$show_ci) {
-      P <- P %>% gf_errorbar(as.formula(
-        paste("sd_lower + sd_upper ~", state$explan)),
-        data = stats,
-        color = "black", width = 0.1, size = 2)
-    }
-  }
-
-  P %>%
-    gf_theme(legend.position = "top") %>%
-    gf_lims(y = state$y_range)
-}
 
 # The list of annotations available.
 # Broken out here so that the %range label can be modified as the level changes
@@ -101,7 +25,7 @@ annot_choices <-
 
 
 
-# Define UI for application that draws a histogram
+# Define UI
 ui <- fluidPage(
   main_display(
     name = "Center & Spread",
@@ -110,7 +34,7 @@ ui <- fluidPage(
                     "No_explanatory_variable"),
     covars = list("None used in this app." = ""), #get_var_names(NHANES, type = "all"),
     multiple_covariates = TRUE,
-    balance_groups = TRUE
+    stratify_sampling = FALSE
     ),
   hr(),
   # App-specific controls
@@ -136,7 +60,28 @@ server <- function(session, input, output) {
   # The boilerplate app
   V <- reactiveValues()
   V$Raw_data <- NHANES
+
+  # Reactives for filling in the display tabs in the app
+  output$plot <- renderPlot({
+    center_and_spread_plot(V)
+  })
+  output$codebook <- renderText({
+    req(input$response)
+    LA_var_help("NHANES",
+                V$response, V$explan, V$covar,
+                line_length = 40L)
+  })
+  #' There should be files `code.md` and `explain.md` in the directory. These
+  #' contain the materials to be displayed in the "code" and "explain" tabs.
+  output$explain <- renderText({HTML(includeMarkdown("explain.md"))})
+  output$code <- renderText({HTML(includeMarkdown("code.md"))})
+
+  #' Handles creation of the data component of the state, selection of
+  #' variables, and other tasks that are common across many apps
   standard_littleapp_server(session, input, output, V)
+
+
+
   observe({
     # These uses of V are specific to this app.
     V$model_formula <<- as.formula(paste(input$response, "~", input$explan))
@@ -191,19 +136,7 @@ server <- function(session, input, output) {
     V$ruler_formula <<- as.formula(paste("stat + sd ~ ", input$explan))
   })
 
-  output$plot <- renderPlot({
-    main_plot_function(V)
-  })
-  output$codebook <- renderText({
-    req(input$response)
-    LA_var_help("NHANES",
-                V$response, V$explan, V$covar,
-                line_length = 40L)
-  })
-  #' There should be files `code.md` and `explain.md` in the directory. These
-  #' contain the materials to be displayed in the "code" and "explain" tabs.
-  output$explain <- renderText({HTML(includeMarkdown("explain.md"))})
-  output$code <- renderText({HTML(includeMarkdown("code.md"))})
+
 }
 
 # Run the application
