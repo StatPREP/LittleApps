@@ -1,4 +1,4 @@
-# Center and spread app
+# Two-sample t app
 
 library(shiny)
 library(LittleApps)
