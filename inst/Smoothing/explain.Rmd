@@ -1,0 +1,49 @@
+---
+title: 'Little App Guide: Smoothing'
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+library(LittleApps)
+library(dplyr)
+library(forcats)
+library(NHANES)
+library(mosaic)
+knitr::opts_chunk$set(echo = FALSE, out.width = "80%", fig.align = "center")
+# Dicotomize some variables of particular interest
+NHANES <- NHANES %>%
+  mutate(PregnantNow = fct_recode(PregnantNow, NULL = "Unknown"),
+         HomeOwn     = fct_recode(HomeOwn,    NULL = "Other" ),
+         Depressed   = fct_recode(Depressed,   Several = "Most"),
+         Work        = fct_recode(Work, NotWorking = "Looking"),
+         LittleInterest = fct_recode(LittleInterest, Several = "Most"))
+get_data <- function(V) {
+  NHANES[ , c(V$explan, V$response)] %>%
+    na.omit() %>%
+    sample_n(size = V$samp_n)
+}
+
+```
+
+This Little App 
+```{r warning = FALSE}
+V <- list()
+V$samp_n <- 200
+V$response <- "Poverty"
+V$explan <- "Work"
+V$model_formula <- Poverty ~ Work
+set.seed(101)
+V$data <- get_data(V)
+V$show_mean <- TRUE
+V$show_ci <- FALSE
+V$show_t <- FALSE
+V$ci_level <- 0.95
+V$y_range <- range(NHANES[ , V$response], na.rm = TRUE)
+V$equal_var <- FALSE
+V$center_on <- "Left"
+
+two_sample_t_plot(V)
+```
+

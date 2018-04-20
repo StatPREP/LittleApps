@@ -17,6 +17,7 @@
 #' @param covars character vector giving names of response variables
 #' @param multiple_covariates Logical. If `TRUE`, allow multiple covariates to be selected.
 #' @param stratify_sampling Logical. If `TRUE`, add a checkbox to put n in each group
+#' @param additional_tabs List with any additional tabPanels to be added to the graphics/explan/code display.
 #' @param ... Other shiny controls to be added to data-specification panel
 #'
 #'
@@ -32,16 +33,19 @@ main_display <- function(
   covars = "None",
   multiple_covariates = FALSE,
   stratify_sampling = FALSE,
+  additional_panels = list(),
   ...) {
 
   PLOT <- plotOutput("plot", brush = brush)
   EXPLAIN <- htmlOutput("explain")
   CODEBOOK <- verbatimTextOutput("codebook")
   R_COMMANDS <- htmlOutput("code")
-  DISPLAY <- tabsetPanel(tabPanel("Graphic", PLOT),
-                         tabPanel("Explain", EXPLAIN),
-                         tabPanel("Codebook", CODEBOOK),
-                         tabPanel("R Commands", R_COMMANDS))
+  tab_set <- rlang::flatten(list(tabPanel("Graphic", PLOT),
+                                 additional_panels,
+                                 tabPanel("Explain", EXPLAIN),
+                                 tabPanel("Codebook", CODEBOOK),
+                                 tabPanel("R Commands", R_COMMANDS)))
+  DISPLAY <- do.call(tabsetPanel, tab_set)
   fluidRow(
     column(3, # Data specification panel
            h4("Little App:"),

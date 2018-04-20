@@ -35,9 +35,11 @@
 #'
 #' @export
 standard_littleapp_server <- function(session, input, output, V) {
-  #V <- reactiveValues() # This is created outside the function
   get_data <- reactive({
-    res <- V$Raw_data[, c(input$explan, input$response, input$covar)]
+    if (any(input$covar == "None selected"))
+      res <- V$Raw_data[, c(input$explan, input$response)]
+    else
+      res <- V$Raw_data[, c(input$explan, input$response, input$covar)]
     res %>% na.omit()
   })
   get_samp <- reactive( {
@@ -47,12 +49,17 @@ standard_littleapp_server <- function(session, input, output, V) {
     } else {
       get_data()
     }
-    res <- res %>% sample_n(size = V$samp_n)
-
+    if (V$explan == V$response) {
+      # dplyr::sample_n doesn't work if two columns have the same name
+      res <- res[sample(1:nrow(res), V$samp_n), ]
+    } else {
+      res <- res %>% sample_n(size = V$samp_n)
+    }
     if (V$shuffle) {
-      res[[V$explan]] <- sample(res[[V$explan]])
+      res[[V$response]] <- sample(res[[V$response]])
     }
     V$data <<- res
+
     res
   })
 

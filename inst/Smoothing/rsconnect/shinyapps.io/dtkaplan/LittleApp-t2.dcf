@@ -1,0 +1,12 @@
+name: LittleApp-t2
+title: LittleApp-t2
+username:
+account: dtkaplan
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 326123
+bundleId: 1327776
+url: https://dtkaplan.shinyapps.io/LittleApp-t2/
+when: 1524153368.94366
+asMultiple: FALSE
+asStatic: FALSE

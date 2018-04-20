@@ -7,7 +7,8 @@
 main_display(name = "Name of app", sample_sizes = c(5, 10, 20, 50, 100, 500,
   1000), brush = brushOpts("horiz_line", direction = "y", fill = NA),
   response_vars = NULL, explan_vars = "None", covars = "None",
-  multiple_covariates = FALSE, stratify_sampling = FALSE, ...)
+  multiple_covariates = FALSE, stratify_sampling = FALSE,
+  additional_panels = list(), ...)
 }
 \arguments{
 \item{sample_sizes}{numerical vector giving allowable sample sizes}
@@ -25,6 +26,8 @@ main_display(name = "Name of app", sample_sizes = c(5, 10, 20, 50, 100, 500,
 \item{stratify_sampling}{Logical. If \code{TRUE}, add a checkbox to put n in each group}
 
 \item{...}{Other shiny controls to be added to data-specification panel}
+
+\item{additional_tabs}{List with any additional tabPanels to be added to the graphics/explan/code display.}
 }
 \value{
 A shiny tag that can be displayed as one entity.

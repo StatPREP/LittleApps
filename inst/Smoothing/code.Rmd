@@ -1,0 +1,16 @@
+---
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r include = FALSE}
+library(mosaicCore)
+library(dplyr)
+library(ggformula)
+library(NHANES)
+set.seed(101)
+```
+
+These are the main R commands used in this Little App.
+
