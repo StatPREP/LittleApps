@@ -7,6 +7,7 @@ library(NHANES)
 library(dplyr)
 library(forcats)
 library(mosaicCore)
+library(mosaicModel)
 
 # additional display tabs for this app
 ANOVA <- verbatimTextOutput("anova_report")
@@ -54,8 +55,15 @@ server <- function(session, input, output) {
   # reactives for display tabs
   output$plot <- renderPlot({
     req(V$model_formula) # make sure V is initialized
-    # two_sample_t_plot(V)
+    smoother_plot(V)
   })
+  output$anova_report <- renderText({names(V$data)
+    paste(capture.output(anova(fit_model())), collapse = "\n")
+    })
+  output$regression_report <- renderText({names(V$data)
+    paste(capture.output(summary(fit_model()))[-(1:8)], collapse = "\n")
+    })
+
   output$codebook <- renderText({
     req(input$response)
     LA_var_help("NHANES",
@@ -69,6 +77,10 @@ server <- function(session, input, output) {
 
   #' General handling of data, selection of variables, etc.
   standard_littleapp_server(session, input, output, V)
+  fit_model <- reactive({
+    cat("Fitting model\n")
+    lm(req(V$model_formula), data = req(V$data))
+  })
 
   observe({
     explan_term <- if(input$smoothing > 1) {
@@ -77,7 +89,6 @@ server <- function(session, input, output) {
       V$explan
     }
     covars <- V$covar[V$covar != "None selected"]
-
     if (length(covars) > 0) { # there are covariates in the model
       V$model_formula <<- as.formula(paste(
         V$response, "~", explan_term,

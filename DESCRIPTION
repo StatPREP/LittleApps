@@ -7,7 +7,7 @@ Maintainer: Daniel Kaplan <kaplan@macalester.edu>
 Description: Data-centric interactive apps for teaching stats
 License: What license is it under?
 Depends: shiny
-Imports: rmarkdown, dplyr, ggplot2, ggformula, RColorBrewer, rlang, NHANES
+Imports: rmarkdown, dplyr, ggplot2, ggformula, RColorBrewer, rlang, NHANES, mosaicModel
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1
