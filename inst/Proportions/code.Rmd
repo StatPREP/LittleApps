@@ -1,0 +1,24 @@
+---
+output: 
+  html_document: 
+    keep_md: yes
+---
+## Commands relating to the app
+
+This will be where the annotation elements of the display will be described:
+
+```{r message = FALSE, warning = FALSE}
+library(dplyr)
+library(mosaic)
+```
+
+You can do it this way
+```{r}
+t.test(hp ~ mpg > 25, data = mtcars, var.equal = TRUE)
+```
+
+Or this way, which is more general
+```{r}
+mod <- lm(hp ~ cyl, data = mtcars)
+summary(mod)
+```

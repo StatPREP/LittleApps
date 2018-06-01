@@ -1,0 +1,47 @@
+---
+title: 'Little App Guide: Proportions'
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+library(LittleApps)
+library(dplyr)
+library(forcats)
+library(NHANES)
+library(mosaic)
+knitr::opts_chunk$set(echo = FALSE, out.width = "80%", fig.align = "center")
+# Dicotomize some variables of particular interest
+NHANES <- NHANES %>%
+  mutate(No_explanatory_variable = " ",
+         "BP_over_130" = ifelse(BPSys1 >= 130, "yes", "< 130"),
+         "Own_Home" = ifelse(HomeOwn == "Own", "yes", "no"),
+         "Below_Poverty_Level" = ifelse(Poverty <= 1, "poor", "not"),
+         "Pregnant" = ifelse(PregnantNow == "Yes", "yes", "not"),
+         "Depressed" = ifelse(Depressed != "None", "yes", "no")
+         )
+get_data <- function(V) {
+  NHANES[ , c(V$explan, V$response)] %>%
+    na.omit() %>%
+    sample_n(size = V$samp_n)
+}
+```
+
+```{r warning = FALSE}
+V <- list()
+V$samp_n <- 200
+V$response <- "Below_Poverty_Level"
+V$explan <- "BP_over_130"
+V$explan <- "LittleInterest"
+V$explan <- "SleepHrsNight"
+ V$explan <- "Age"
+ V$explan <- "Depressed"
+set.seed(101)
+V$data <- get_data(V)
+V$logistic <- TRUE
+V$smoothing <- 3
+V$show_ci <- TRUE
+
+proportions_plot(V)
+```

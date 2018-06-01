@@ -233,4 +233,73 @@ smoother_plot <- function(state) {
   P
 }
 
+#' @export
+proportions_plot <- function(state) {
+  discrete_explanatory <- state$explan == "No_explanatory_variable" ||
+    length(unique(state$data[[state$explan]])) < 10
+  jitter_width <- ifelse(discrete_explanatory, 0.2, 0.0)
+  model_formula <-
+    if (state$explan == "No_explanatory_variable") {
+      binary ~ 1
+    } else if (discrete_explanatory) {
+      as.formula(paste0("binary ~", state$explan))
+    } else {
+      as.formula(paste0("binary ~ ns(", state$explan, ", ", state$smoothing, ")"))
+    }
+  data_formula <-
+    if (state$explan == "No_explanatory_variable") {
+      as.formula(paste(state$response, "~ 1"))
+    } else {
+      as.formula(paste0(state$response, "~", state$explan))
+    }
+  the_data <- state$data
+  second_val <- c(sort(unique(the_data[[state$response]])))[2]
+  the_data$binary <- the_data[[state$response]] == second_val
+  P <- gf_jitter(data_formula, data = the_data,
+                 height = 0.2, width = as.numeric(jitter_width),
+                 alpha = point_alpha(state$samp_n)) %>%
+       gf_labs(y = state$response, x = state$explan )
+  # fit and evaluate model
+  mod <- if (state$logistic)
+    glm(model_formula, data = the_data, family = binomial)
+  else lm(model_formula, data = the_data)
+  model_vals <- mosaicModel::mod_eval(mod, nlevels = Inf,
+                                      interval = "confidence")
+  model_vals$upper <- ifelse(model_vals$upper > 1.1, 1.1, model_vals$upper)
+  model_vals$lower <- ifelse(model_vals$lower < -0.1, -0.1, model_vals$lower)
+  model_vals$explan <- model_vals[[state$explan]]
+  # put model values on the same scale as the response variable
+  model_vals <- model_vals %>%
+    mutate(upper = upper + 1,
+           lower = lower + 1,
+           model_output = model_output + 1)
+
+  if (state$show_ci) {
+    P <- P %>% gf_errorbar(lower + upper ~ explan,
+                           data = model_vals, color = LA_color("conf_int"),
+                           alpha = ifelse(discrete_explanatory, 0.5, 0.1))
+  }
+
+  if (discrete_explanatory) {
+    P <- P %>% gf_errorbar(model_output + model_output ~ explan,
+                           data = model_vals)
+  } else {
+    P <- P %>% gf_line(model_output ~ explan,
+                       data = model_vals, size = 2, color = LA_color("model_fun"), alpha = 0.5)
+  }
+
+  return(P)
+  second_axis = dup_axis(name = "Numeric",
+                         breaks = seq(0, 1, by = 0.2),
+                         labels = c(0, "0.2", "0.4", "0.6", "0.8", 1))
+  gf_refine(scale_y_continuous(
+    name = state$response,
+    breaks = seq(0, 1, by = 0.2),
+    limits = state$y_lims,
+    labels = c(level_labs[1], "", "", "", "", level_labs[2]),
+    sec.axis = second_axis,
+    verbatim_colors())) %>%
+  gf_theme(legend.position = "none")
+}
+
 
