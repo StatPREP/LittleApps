@@ -41,9 +41,10 @@ annot_choices <-
 # Define UI
 ui <- fluidPage(
   main_display(
-    name = "Center & Spread",
+    name = "Proportions",
     response_vars = response_vars,
-    explan_vars = c("No_explanatory_variable", categorical_vars, quantitative_vars),
+    # should add "No_explanatory_variable" to the explan_vars, but needs to be debugged
+    explan_vars = c(categorical_vars, quantitative_vars),
     covars = list("None used in this app." = "None selected"), ,
     multiple_covariates = FALSE,
     stratify_sampling = FALSE

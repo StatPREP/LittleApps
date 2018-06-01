@@ -1,0 +1,12 @@
+name: LittleApp_center-and-spread
+title: LittleApp_center-and-spread
+username:
+account: dtkaplan
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 352503
+bundleId: 1405086
+url: https://dtkaplan.shinyapps.io/LittleApp_center-and-spread/
+when: 1527857059.04279
+asMultiple: FALSE
+asStatic: FALSE
