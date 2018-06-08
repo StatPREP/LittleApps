@@ -57,7 +57,7 @@ center_and_spread_plot <- function(state) {
            sd_lower = stat + ci_sd_lower)
   P <- gf_jitter(state$model_formula, data = state$data,
                  alpha = point_alpha(state$samp_n),
-                 color = state$color_formula, width = 0.1, height = 0)
+                 color = state$color_formula, width = 0.1, height = 0, seed = 12345)
 
 
   if (state$show_mean) {
@@ -121,6 +121,7 @@ two_sample_t_plot <-  function(state) {
   P <- do.call(gf_jitter, list(F, data = state$data,
                           color = COLOR,
                           width = 0.2,
+                          seed = 12345,
                           alpha = point_alpha(state$samp_n))) %>%
     gf_theme(legend.position = "top") %>%
     gf_lims(y = state$y_range)
@@ -257,6 +258,7 @@ proportions_plot <- function(state) {
   the_data$binary <- the_data[[state$response]] == second_val
   P <- gf_jitter(data_formula, data = the_data,
                  height = 0.2, width = as.numeric(jitter_width),
+                 seed = 12345,
                  alpha = point_alpha(state$samp_n)) %>%
        gf_labs(y = state$response, x = state$explan )
   # fit and evaluate model
