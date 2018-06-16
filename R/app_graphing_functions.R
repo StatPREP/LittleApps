@@ -57,7 +57,8 @@ center_and_spread_plot <- function(state) {
            sd_lower = stat + ci_sd_lower)
   P <- gf_jitter(state$model_formula, data = state$data,
                  alpha = point_alpha(state$samp_n),
-                 color = state$color_formula, width = 0.1, height = 0, seed = 12345)
+                 color = state$color_formula, width = 0.1, height = 0,
+                 seed = 12345)
 
 
   if (state$show_mean) {
