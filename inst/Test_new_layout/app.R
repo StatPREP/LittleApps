@@ -134,6 +134,7 @@ server <- function(input, output, session) {
                    alpha = point_alpha(samp_n()),
                    width = 0.1,
                    height = 0,
+                   seed = 12345,
                    show.legend = FALSE)
 
     P <- P %>% gf_errorbar(mn + mn ~ xpos,

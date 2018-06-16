@@ -50,7 +50,7 @@ My_sample <- NHANES %>%
 The App's display of the data themselves is in the form of a *jittered* scatterplot:
 ```{r out.width = "70%"}
 gf_jitter(Height ~ Gender, data = My_sample, color = ~ Gender,
-          width = 0.2, height = 0)
+          width = 0.2, height = 0, seed = 12345)
 ```
 
 The `width = 0.2` means that the extent of the horizontal jittering should be 20% of the way to the neighboring group. `height = 0` means not to do any vertical jittering.

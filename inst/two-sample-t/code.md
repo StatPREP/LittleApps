@@ -48,7 +48,7 @@ The App's display of the data themselves is in the form of a *jittered* scatterp
 
 ```r
 gf_jitter(Height ~ Gender, data = My_sample, color = ~ Gender,
-          width = 0.2, height = 0)
+          width = 0.2, height = 0, seed = 12345)
 ```
 
 <img src="code_files/figure-html/unnamed-chunk-5-1.png" width="70%" />
