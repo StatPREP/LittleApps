@@ -8,6 +8,15 @@ library(dplyr)
 library(forcats)
 library(mosaicCore)
 library(mosaicModel)
+library(mosaic)
+
+renderMarkdownIfFileExists <- function(path) {
+  if( file.exists(path)) {
+    renderText({HTML(includeMarkdown(path))})
+  } else {
+    renderText({"Nothing available."})
+  }
+}
 
 # additional display tabs for this app
 ANOVA <- verbatimTextOutput("anova_report")
@@ -60,8 +69,10 @@ server <- function(session, input, output) {
   output$anova_report <- renderText({names(V$data)
     paste(capture.output(anova(fit_model())), collapse = "\n")
     })
-  output$regression_report <- renderText({names(V$data)
-    paste(capture.output(summary(fit_model()))[-(1:8)], collapse = "\n")
+  output$regression_report <-
+    renderText({
+      names(V$data)
+      paste(capture.output(mosaic::msummary(fit_model())), collapse = "\n")
     })
 
   output$codebook <- renderText({
@@ -72,8 +83,8 @@ server <- function(session, input, output) {
   })
   #' There should be files `code.md` and `explain.md` in the directory. These
   #' contain the materials to be displayed in the "code" and "explain" tabs.
-  output$explain <- renderText({HTML(includeMarkdown("explain.md"))})
-  output$code <- renderText({HTML(includeMarkdown("code.md"))})
+  output$explain <- renderMarkdownIfFileExists("explain.md")
+  output$code <- renderMarkdownIfFileExists("code.md")
 
   #' General handling of data, selection of variables, etc.
   standard_littleapp_server(session, input, output, V)
@@ -101,14 +112,11 @@ server <- function(session, input, output) {
 
   observe({
     V$show_mod_vals <<-
-      if ("layers" %in% names(input)) "show_mod_vals" %in% input$layers
-      else FALSE
+      ("layers" %in% names(input)) && ("show_mod_vals" %in% input$layers)
     V$trace_horiz <<-
-      if ("layers" %in% names(input)) "trace_horiz" %in% input$layers
-      else FALSE
+      ("layers" %in% names(input)) && ("trace_horiz" %in% input$layers)
     V$trace_vert <<-
-      if ("layers" %in% names(input)) "trace_vert" %in% input$layers
-      else FALSE
+      ("layers" %in% names(input)) && ("trace_vert" %in% input$layers)
   })
 
 }
